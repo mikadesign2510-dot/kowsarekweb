@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, User, ShieldCheck, Loader2, RefreshCw, AlertTriangle, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, User, ShieldCheck, Loader2, RefreshCw, AlertTriangle, ShieldAlert, Eye, EyeOff, ArrowRight, Home } from 'lucide-react';
 import { storage } from '../../lib/storage';
 
 export default function AdminLogin() {
@@ -200,7 +200,18 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-slate-100/70 flex items-center justify-center p-4 relative" dir="rtl">
+      {/* دکمه بازگشت شناور بالا */}
+      <div className="absolute top-6 right-6">
+        <Link
+          to="/"
+          className="flex items-center gap-2 bg-white/90 hover:bg-white text-slate-700 hover:text-blue-600 px-4 py-2 rounded-2xl shadow-sm border border-slate-200 text-xs font-bold transition-all hover:shadow"
+        >
+          <ArrowRight className="w-4 h-4 text-blue-600" />
+          <span>بازگشت به صفحه اصلی سایت</span>
+        </Link>
+      </div>
+
       <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-200">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg shadow-blue-600/20">
@@ -325,7 +336,7 @@ export default function AdminLogin() {
           <button
             type="submit"
             disabled={isLoading || lockoutRemaining > 0}
-            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_4px_15px_rgba(37,99,235,0.2)] flex items-center justify-center gap-2"
+            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_4px_15px_rgba(37,99,235,0.2)] flex items-center justify-center gap-2 cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -338,6 +349,16 @@ export default function AdminLogin() {
               'ورود به پنل مدیریت'
             )}
           </button>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors py-2 px-3 rounded-lg hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-400 group-hover:text-blue-600" />
+              <span>بازگشت به پورتال اصلی دانشگاه</span>
+            </Link>
+          </div>
         </form>
       </div>
     </div>
