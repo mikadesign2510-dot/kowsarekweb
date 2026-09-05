@@ -23,6 +23,7 @@ export default function FormsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('همه');
   const [selectedFormat, setSelectedFormat] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'title'>('popular');
+  const [showOnlyPinned, setShowOnlyPinned] = useState<boolean>(false);
   const [selectedModalForm, setSelectedModalForm] = useState<FormItem | null>(null);
   const [downloadSuccessId, setDownloadSuccessId] = useState<string | null>(null);
   const [settings, setSettings] = useState(storage.getSettings());
@@ -93,6 +94,9 @@ export default function FormsPage() {
         if (selectedType === 'form' && item.itemType === 'pamphlet') return false;
         if (selectedType === 'pamphlet' && item.itemType !== 'pamphlet') return false;
 
+        // Pinned only filter
+        if (showOnlyPinned && !item.isPinned) return false;
+
         const matchesCategory = selectedCategory === 'همه' || item.category === selectedCategory;
         const matchesFormat = selectedFormat === 'all' || item.fileFormat.toLowerCase() === selectedFormat.toLowerCase();
         const matchesSearch = 
@@ -112,7 +116,7 @@ export default function FormsPage() {
         if (sortBy === 'title') return a.title.localeCompare(b.title, 'fa');
         return (b.priority || 0) - (a.priority || 0);
       });
-  }, [forms, selectedType, searchQuery, selectedCategory, selectedFormat, sortBy]);
+  }, [forms, selectedType, showOnlyPinned, searchQuery, selectedCategory, selectedFormat, sortBy]);
 
   // Handle Download
   const handleDownload = (form: FormItem, e?: React.MouseEvent) => {
@@ -318,6 +322,20 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                   <option value="zip">فایل‌های فشرده (ZIP)</option>
                 </select>
               </div>
+
+              {/* Pinned Filter Button */}
+              <button
+                type="button"
+                onClick={() => setShowOnlyPinned(!showOnlyPinned)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                  showOnlyPinned
+                    ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200'
+                }`}
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${showOnlyPinned ? 'text-amber-200' : 'text-amber-500'}`} />
+                <span>{showOnlyPinned ? 'منتخب‌ها فعال' : 'فقط منتخب‌ها ⭐'}</span>
+              </button>
 
               {/* Sort Filter */}
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">

@@ -618,7 +618,153 @@ function RenderPresentationImageFrame({
         </div>
       );
 
-    // 14. Floating Isometric / Default
+    // 14. Laptop & Modern Retina Display Mockup Frame
+    case 'laptop-mockup':
+      return (
+        <div className="relative group max-w-2xl mx-auto">
+          {/* Laptop Screen Body */}
+          <div className="bg-slate-900 rounded-t-2xl p-2.5 sm:p-3 pb-0 shadow-2xl border-4 border-slate-700/90 relative">
+            {/* Camera & Sensor Notch */}
+            <div className="w-2.5 h-2.5 bg-slate-950 rounded-full mx-auto mb-1.5 border border-slate-800 flex items-center justify-center">
+              <div className="w-1 h-1 bg-cyan-400/80 rounded-full" />
+            </div>
+
+            {/* Browser Control Bar */}
+            <div className="flex items-center justify-between px-3 py-1 bg-slate-800/90 rounded-t-lg text-[10px] text-slate-400 font-mono mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <span className="truncate max-w-[200px] text-slate-300">kowsar-kaki.uast.ac.ir</span>
+              <span className="w-2 h-2 rounded-full bg-slate-600" />
+            </div>
+
+            {/* Screen Content */}
+            <div className="relative rounded-b-lg overflow-hidden aspect-[16/10] bg-black">
+              <img 
+                src={section.image} 
+                alt={section.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
+              {renderOverlayBadge('top-right', 'glass')}
+            </div>
+          </div>
+
+          {/* Laptop Base Stand */}
+          <div className="relative">
+            <div className="h-3.5 bg-gradient-to-b from-slate-600 to-slate-800 rounded-b-xl shadow-xl mx-auto w-full border-t border-slate-500 flex justify-center">
+              <div className="w-16 h-1 bg-slate-900 rounded-b-md" />
+            </div>
+            <div className="h-1 bg-slate-900/60 rounded-full blur-xs mx-auto w-[92%]" />
+          </div>
+        </div>
+      );
+
+    // 15. Smartphone / iPhone Dynamic Island Mockup Frame
+    case 'phone-mockup':
+      return (
+        <div className="relative group max-w-xs sm:max-w-sm mx-auto">
+          {/* Phone Shell */}
+          <div className="bg-gradient-to-b from-slate-800 to-slate-950 p-3 rounded-[44px] shadow-2xl border-4 border-slate-600/90 ring-1 ring-white/20 relative">
+            {/* Dynamic Island */}
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-30 flex items-center justify-between px-2.5 shadow-md">
+              <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
+              <div className="w-2.5 h-2.5 bg-slate-900 rounded-full border border-slate-800" />
+            </div>
+
+            {/* Screen Area */}
+            <div className="relative rounded-[34px] overflow-hidden aspect-[9/16] bg-slate-950 border border-slate-900">
+              <img 
+                src={section.image} 
+                alt={section.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+              {renderOverlayBadge('bottom-center', 'glass')}
+              
+              {/* Home Indicator Bar */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/70 rounded-full z-20" />
+            </div>
+          </div>
+        </div>
+      );
+
+    // 16. Persian Royal Illumination & Arabesque Frame
+    case 'persian-illumination':
+      return (
+        <div className="relative group p-4 sm:p-5 bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 rounded-[36px] shadow-2xl border-2 border-amber-400/60">
+          <div className="absolute inset-0 rounded-[36px] bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.25),transparent)] pointer-events-none" />
+          <div className="p-2 border border-dashed border-amber-300/50 rounded-[28px] relative z-10">
+            <div className="relative rounded-[22px] overflow-hidden aspect-[16/10] sm:aspect-[21/10] border-2 border-amber-400/80 shadow-inner">
+              <img 
+                src={section.image} 
+                alt={section.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-transparent to-amber-500/10 pointer-events-none" />
+              {renderOverlayBadge('top-right', 'gold', <Gem className="w-3.5 h-3.5 text-slate-950" />)}
+            </div>
+          </div>
+        </div>
+      );
+
+    // 17. Crimson Ruby & Velvet Luxury Frame
+    case 'crimson-ruby':
+      return (
+        <div className="relative group">
+          <div className="absolute -inset-2 bg-gradient-to-r from-rose-600 via-red-600 to-amber-500 rounded-[34px] blur-xl opacity-50 group-hover:opacity-80 transition-opacity duration-700" />
+          <div className="relative rounded-[30px] p-3 bg-gradient-to-b from-rose-950 via-slate-950 to-black border-2 border-rose-500/50 shadow-2xl overflow-hidden">
+            <div className="rounded-[22px] overflow-hidden aspect-[16/10] sm:aspect-[21/10] relative border border-rose-400/40">
+              <img 
+                src={section.image} 
+                alt={section.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-rose-950/90 via-transparent to-rose-500/15 pointer-events-none" />
+              {renderOverlayBadge('top-right', 'gold', <Flame className="w-3.5 h-3.5 text-slate-950" />)}
+            </div>
+          </div>
+        </div>
+      );
+
+    // 18. Aurora Galaxy & Nebula Cosmic Frame
+    case 'aurora-galaxy':
+      return (
+        <div className="relative group">
+          <div className="absolute -inset-3 bg-gradient-to-tr from-purple-600 via-fuchsia-600 to-indigo-600 rounded-[36px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-700 animate-pulse" />
+          <div className="relative rounded-[30px] p-2.5 bg-slate-950/90 backdrop-blur-2xl border-2 border-purple-400/40 shadow-2xl overflow-hidden">
+            <div className="rounded-[22px] overflow-hidden aspect-[16/10] sm:aspect-[21/10] relative">
+              <img 
+                src={section.image} 
+                alt={section.title}
+                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-purple-950/80 via-transparent to-indigo-500/20 pointer-events-none" />
+              {renderOverlayBadge('top-right', 'neon', <Sparkles className="w-3.5 h-3.5 text-cyan-300" />)}
+            </div>
+          </div>
+        </div>
+      );
+
+    // 19. Minimal Neumorphic Soft Card Frame
+    case 'minimal-card-shadow':
+      return (
+        <div className="relative group p-3 bg-white/95 rounded-[32px] shadow-[0_25px_60px_rgba(0,0,0,0.35)] border border-slate-100">
+          <div className="relative rounded-[24px] overflow-hidden aspect-[16/10] sm:aspect-[21/10]">
+            <img 
+              src={section.image} 
+              alt={section.title}
+              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent pointer-events-none" />
+            {renderOverlayBadge('bottom-right', 'minimal')}
+          </div>
+        </div>
+      );
+
+    // 20. Floating Isometric / Default
     case 'floating-isometric':
     case 'rounded-standard':
     default:
@@ -639,12 +785,24 @@ function RenderPresentationImageFrame({
 const PresentationBlock: React.FC<{ section: PresentationSection, index: number, isLast: boolean }> = ({ section, index, isLast }) => {
   const getThemeClasses = (theme: string) => {
     switch (theme) {
+      case 'ocean':
+        return 'bg-gradient-to-br from-sky-950 via-blue-950 to-slate-950 text-white';
+      case 'emerald':
+        return 'bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 text-white';
+      case 'royal':
+        return 'bg-gradient-to-br from-purple-950 via-indigo-950 to-slate-950 text-white';
+      case 'amber':
+        return 'bg-gradient-to-br from-amber-950 via-stone-900 to-slate-950 text-white';
+      case 'ruby':
+        return 'bg-gradient-to-br from-rose-950 via-red-950 to-slate-950 text-white';
+      case 'midnight':
+        return 'bg-gradient-to-br from-slate-950 via-black to-slate-950 text-white';
       case 'dark':
         return 'bg-slate-900 text-white';
       case 'primary':
-        return 'bg-blue-600 text-white';
+        return 'bg-gradient-to-br from-blue-900 via-indigo-950 to-slate-950 text-white';
       case 'gradient':
-        return 'bg-gradient-to-br from-indigo-900 via-blue-900 to-emerald-900 text-white';
+        return 'bg-gradient-to-br from-fuchsia-950 via-indigo-950 to-cyan-950 text-white';
       case 'light':
       default:
         return 'bg-slate-50 text-slate-900';

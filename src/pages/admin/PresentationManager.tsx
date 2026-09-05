@@ -36,6 +36,48 @@ const PRESENTATION_FRAME_STYLES: {
     gradient: 'from-blue-600 to-indigo-700'
   },
   {
+    id: 'laptop-mockup',
+    title: 'قاب لپ‌تاپ و مانیتور (Laptop Mockup)',
+    desc: 'قاب مانیتور رتینا مدرن با نوار مرورگر و پایه آلومینیومی شیک',
+    badge: 'جدید',
+    gradient: 'from-slate-700 to-slate-900'
+  },
+  {
+    id: 'phone-mockup',
+    title: 'قاب تلفن همراه هوشمند (Phone Mockup)',
+    desc: 'فریم آیفون و گوشی مدرن با داینامیک آیلند و حاشیه تیتانیومی',
+    badge: 'جدید',
+    gradient: 'from-indigo-600 to-violet-900'
+  },
+  {
+    id: 'persian-illumination',
+    title: 'تذهیب و اسلیمی ایرانی (Persian Royal)',
+    desc: 'قاب اصیل ایرانی با نقوش زرین، حاشیه لاجوردی و طرح اسلیمی شاهانه',
+    badge: 'اصیل',
+    gradient: 'from-blue-700 via-amber-500 to-blue-900'
+  },
+  {
+    id: 'crimson-ruby',
+    title: 'یاقوت سرخ و آتشین (Crimson Ruby)',
+    desc: 'کادر یاقوتی فاخر با هاله سرخ آتشین و حاشیه نورانی طلایی',
+    badge: 'لوکس',
+    gradient: 'from-rose-600 to-red-800'
+  },
+  {
+    id: 'aurora-galaxy',
+    title: 'شفق قطبی و کهکشان (Aurora Galaxy)',
+    desc: 'هاله سحرانگیز کیهانی با درخشش بنفش و نیلی فضایی',
+    badge: 'کهکشانی',
+    gradient: 'from-purple-600 via-fuchsia-600 to-indigo-800'
+  },
+  {
+    id: 'minimal-card-shadow',
+    title: 'کارت سفید مینیمال (Soft Neumorphic)',
+    desc: 'کادر تمیز و لطیف سفید با سایه نئومورفیک نرم و استایل ژورنالی',
+    badge: 'مینیمال',
+    gradient: 'from-slate-100 to-slate-300'
+  },
+  {
     id: 'glass-card',
     title: 'شیشه‌ای مدرن (Glassmorphism)',
     desc: 'پس‌زمینه مات و هاله نئونی چندرنگ با انعکاس نور',
@@ -133,6 +175,20 @@ const PRESENTATION_FRAME_STYLES: {
     badge: 'ساده',
     gradient: 'from-slate-600 to-slate-800'
   }
+];
+
+// Preset Color Palettes & Background Themes for Slides
+const PRESENTATION_COLOR_PALETTES = [
+  { id: 'primary', label: 'آبی دانشگاهی', bg: 'from-blue-900 via-indigo-950 to-slate-950', border: 'border-blue-500', hex: '#2563eb' },
+  { id: 'ocean', label: 'اقیانوس لاجوردی', bg: 'from-sky-900 via-blue-950 to-slate-950', border: 'border-sky-500', hex: '#0284c7' },
+  { id: 'emerald', label: 'زمرد و فیروزه', bg: 'from-emerald-950 via-teal-950 to-slate-950', border: 'border-emerald-500', hex: '#059669' },
+  { id: 'royal', label: 'ارغوانی سلطنتی', bg: 'from-purple-950 via-indigo-950 to-slate-950', border: 'border-purple-500', hex: '#7c3aed' },
+  { id: 'amber', label: 'کهربایی و زرین', bg: 'from-amber-950 via-stone-900 to-slate-950', border: 'border-amber-500', hex: '#d97706' },
+  { id: 'ruby', label: 'یاقوت سرخ', bg: 'from-rose-950 via-red-950 to-slate-950', border: 'border-rose-500', hex: '#e11d48' },
+  { id: 'midnight', label: 'شب مهتابی (مشکی عمیق)', bg: 'from-slate-950 via-black to-slate-950', border: 'border-slate-700', hex: '#0f172a' },
+  { id: 'gradient', label: 'شفق نئونی سه‌بعدی', bg: 'from-fuchsia-950 via-indigo-950 to-cyan-950', border: 'border-fuchsia-500', hex: '#c026d3' },
+  { id: 'dark', label: 'تاریک استاندارد', bg: 'from-slate-900 via-slate-950 to-slate-900', border: 'border-slate-600', hex: '#1e293b' },
+  { id: 'light', label: 'روشن و مینیمال', bg: 'from-slate-100 via-white to-slate-200', border: 'border-slate-300', hex: '#f8fafc' },
 ];
 
 // Preset Overlay Positions for Image Text Overlays
@@ -1411,18 +1467,71 @@ export default function PresentationManager() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">تم رنگی پس‌زمینه</label>
-                    <select
-                      value={editingSection.theme}
-                      onChange={e => setEditingSection({...editingSection, theme: e.target.value as any})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all"
-                    >
-                      <option value="light">روشن (سفید/خاکستری مدرن)</option>
-                      <option value="dark">تاریک (سرمه‌ای و شب)</option>
-                      <option value="primary">رنگ اصلی برند (آبی دانشگاه)</option>
-                      <option value="gradient">گرادیانت سه‌بعدی جذاب</option>
-                    </select>
+                  {/* DEDICATED COLOR THEME & FRAME ACCENT PALETTE */}
+                  <div className="md:col-span-2 bg-gradient-to-br from-indigo-50/50 via-purple-50/30 to-slate-50 p-5 rounded-3xl border border-indigo-200/80 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-indigo-200/60 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                          <Palette className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800">
+                            انتخاب تم رنگی اسلاید و نورپردازی قاب (Color Theme & Lighting)
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            پالت‌های رنگی متنوع برای پس‌زمینه اسلاید و هاله نوری قاب سه‌بعدی
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Custom Accent Color Input */}
+                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-xs">
+                        <span className="text-[11px] font-bold text-slate-600">رنگ نور قاب:</span>
+                        <input
+                          type="color"
+                          value={editingSection.frameAccentColor || '#2563eb'}
+                          onChange={e => setEditingSection({ ...editingSection, frameAccentColor: e.target.value })}
+                          className="w-7 h-7 rounded-lg cursor-pointer border-0 p-0 bg-transparent"
+                          title="انتخاب رنگ دلخواه"
+                        />
+                        <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+                          {editingSection.frameAccentColor || '#2563eb'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Color Swatch Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                      {PRESENTATION_COLOR_PALETTES.map((palette) => {
+                        const isSelected = editingSection.theme === palette.id;
+                        return (
+                          <button
+                            key={palette.id}
+                            type="button"
+                            onClick={() => setEditingSection({ 
+                              ...editingSection, 
+                              theme: palette.id as any,
+                              frameAccentColor: palette.hex
+                            })}
+                            className={`p-2.5 rounded-2xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                              isSelected
+                                ? 'border-indigo-600 bg-white shadow-md ring-2 ring-indigo-200'
+                                : 'border-slate-200 bg-white/70 hover:bg-white hover:border-indigo-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className={`w-full h-7 rounded-xl bg-gradient-to-r ${palette.bg} border ${palette.border} flex items-center justify-end px-2 shadow-xs`}>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow-md" />}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between pt-0.5">
+                              <span className="text-[11px] font-bold text-slate-800 truncate">{palette.label}</span>
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: palette.hex }} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
