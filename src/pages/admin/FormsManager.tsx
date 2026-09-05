@@ -240,16 +240,6 @@ export default function AdminForms() {
     loadData();
     fetchFoldersStats();
     fetchServerFiles();
-    
-    // گوش دادن به تغییرات فرم‌ها و جزوات جهت بروزرسانی خودکار آنی صفحه بدون نیاز به رفرش
-    const handleFormsChanged = () => {
-      const current = storage.getForms();
-      setForms(current);
-      fetchFoldersStats();
-    };
-
-    window.addEventListener('kowsar_forms_changed', handleFormsChanged);
-    window.addEventListener('storage', handleFormsChanged);
 
     // Auto-migrate fw_links to higher_ed_systems
     let currentSettings = storage.getSettings();
@@ -267,11 +257,6 @@ export default function AdminForms() {
         setSiteSettings(newSettings);
       }
     }
-
-    return () => {
-      window.removeEventListener('kowsar_forms_changed', handleFormsChanged);
-      window.removeEventListener('storage', handleFormsChanged);
-    };
   }, []);
 
   useEffect(() => {
@@ -650,11 +635,6 @@ export default function AdminForms() {
     };
 
     const isPamphlet = formData.itemType === 'pamphlet';
-    setActiveTab(isPamphlet ? 'pamphlets' : 'forms');
-    setCategoryFilter('all');
-    setStatusFilter('all');
-    setDegreeFilter('all');
-    setSearchQuery('');
 
     try {
       if (editingId) {
@@ -666,20 +646,22 @@ export default function AdminForms() {
           updatedAt: new Date().toLocaleDateString('fa-IR')
         } as FormItem;
 
-        await storage.updateFormInDB(fullUpdatedItem);
         setForms(prev => prev.map(f => f.id === editingId ? fullUpdatedItem : f));
         setIsEditorOpen(false);
         setEditingId(null);
         setSaveSuccessMessage(isPamphlet ? 'جزوه درسی با موفقیت ویرایش و ذخیره گردید.' : 'فرم با موفقیت ویرایش و ذخیره گردید.');
+        storage.updateFormInDB(fullUpdatedItem).catch(err => console.warn('Update form DB error:', err));
       } else {
+        setActiveTab(isPamphlet ? 'pamphlets' : 'forms');
         const savedItem = await storage.createFormInDB(itemToSave);
         setForms(prev => [savedItem, ...prev.filter(f => f.id !== savedItem.id && f.id !== itemToSave.id)]);
         setIsEditorOpen(false);
         setEditingId(null);
         setSaveSuccessMessage(isPamphlet ? 'جزوه درسی جدید با موفقیت ثبت و منتشر گردید.' : 'فرم جدید با موفقیت ثبت و منتشر گردید.');
+        window.dispatchEvent(new Event('kowsar_forms_changed'));
+        fetchFoldersStats();
       }
 
-      window.dispatchEvent(new Event('kowsar_forms_changed'));
       setTimeout(() => setSaveSuccessMessage(null), 4000);
     } catch (err: any) {
       console.error('Save form error:', err);
@@ -688,11 +670,11 @@ export default function AdminForms() {
       } else {
         const fallbackItem = storage.addForm(itemToSave);
         setForms(prev => [fallbackItem, ...prev.filter(f => f.id !== fallbackItem.id)]);
+        window.dispatchEvent(new Event('kowsar_forms_changed'));
       }
       setIsEditorOpen(false);
       setEditingId(null);
       setSaveSuccessMessage(isPamphlet ? 'جزوه با موفقیت ذخیره شد.' : 'فرم با موفقیت ذخیره شد.');
-      window.dispatchEvent(new Event('kowsar_forms_changed'));
       setTimeout(() => setSaveSuccessMessage(null), 4000);
     } finally {
       setIsSaving(false);
@@ -718,7 +700,6 @@ export default function AdminForms() {
 
     try {
       await storage.deleteFormFromDB(id);
-      await loadData();
       fetchFoldersStats();
     } catch (err) {
       console.warn('DB delete single form error:', err);
@@ -742,7 +723,6 @@ export default function AdminForms() {
       for (const id of idsToDelete) {
         await storage.deleteFormFromDB(id);
       }
-      await loadData();
       fetchFoldersStats();
     } catch (err) {
       console.warn('DB bulk delete item error:', err);
@@ -758,7 +738,6 @@ export default function AdminForms() {
 
     try {
       await storage.saveFormsToDB(updated);
-      await loadData();
       fetchFoldersStats();
     } catch (err) {
       console.warn('DB sync forms error:', err);
@@ -766,30 +745,32 @@ export default function AdminForms() {
   };
 
   const handleTogglePublish = async (id: string) => {
-    storage.toggleFormPublish(id);
-    const updated = storage.getForms();
+    const item = forms.find(f => f.id === id);
+    if (!item) return;
+    const updatedItem = { ...item, isPublished: !item.isPublished };
+    const updated = forms.map(f => f.id === id ? updatedItem : f);
     setForms(updated);
-    window.dispatchEvent(new Event('kowsar_forms_changed'));
+    storage.saveForms(updated, false);
 
     try {
-      await storage.saveFormsToDB(updated);
-      await loadData();
+      storage.updateFormInDB(updatedItem).catch(() => {});
     } catch (err) {
-      console.warn('DB sync forms error:', err);
+      console.warn('DB toggle publish error:', err);
     }
   };
 
   const handleTogglePin = async (id: string) => {
-    storage.toggleFormPin(id);
-    const updated = storage.getForms();
+    const item = forms.find(f => f.id === id);
+    if (!item) return;
+    const updatedItem = { ...item, isPinned: !item.isPinned };
+    const updated = forms.map(f => f.id === id ? updatedItem : f);
     setForms(updated);
-    window.dispatchEvent(new Event('kowsar_forms_changed'));
+    storage.saveForms(updated, false);
 
     try {
-      await storage.saveFormsToDB(updated);
-      await loadData();
+      storage.updateFormInDB(updatedItem).catch(() => {});
     } catch (err) {
-      console.warn('DB sync forms error:', err);
+      console.warn('DB toggle pin error:', err);
     }
   };
 
@@ -809,20 +790,13 @@ export default function AdminForms() {
   };
 
   const handleBulkPublish = async (status: boolean) => {
-    selectedIds.forEach(id => {
-      const item = forms.find(f => f.id === id);
-      if (item && item.isPublished !== status) {
-        storage.updateForm({ ...item, isPublished: status });
-      }
-    });
-    const updated = storage.getForms();
+    const updated = forms.map(f => selectedIds.includes(f.id) ? { ...f, isPublished: status } : f);
     setForms(updated);
+    storage.saveForms(updated, false);
     setSelectedIds([]);
-    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     try {
       await storage.saveFormsToDB(updated);
-      await loadData();
     } catch (err) {
       console.warn('DB sync forms error:', err);
     }

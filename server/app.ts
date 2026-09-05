@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import os from 'os';
@@ -32,6 +33,22 @@ export const app: Express = express();
 // مخفی‌سازی ردپای نسخه اکسپرس
 app.disable('x-powered-by');
 
+// فعال‌سازی جامع CORS برای جلوگیری از خطاهای 403 و دسترسی پیش‌نمایش و ای‌پی‌آی
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-admin-email',
+    'x-student-id',
+    'x-upload-folder',
+    'x-requested-with',
+    'Accept'
+  ]
+}));
+
 // اطمینان از وجود پوشه uploads و پوشه‌های اختصاصی جزوات و فرم‌ها
 const uploadsDir = path.join(process.cwd(), 'uploads');
 const pamphletsDir = path.join(uploadsDir, 'pamphlets');
@@ -58,11 +75,11 @@ initializeDatabase().catch((err) => {
 
 /**
  * ========================================================
- * پیاده‌سازی لایه‌های امنیتی استاندارد موزیلا (Mozilla Observatory A+)
+ * پیاده‌سازی لایه‌های امنیتی استاندارد و سازگار با پیش‌نمایش آی‌فریم
  * ========================================================
  */
 
-// ۱. میان‌افزار اعمال هدرهای امنیتی موزیلا و استانداردهای وب
+// ۱. میان‌افزار اعمال هدرهای امنیتی و استانداردهای وب بدون مسدودسازی پیش‌نمایش
 app.use((req, res, next) => {
   // جلوگیری از حملات دستکاری نوع فایل (MIME sniffing)
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -73,14 +90,14 @@ app.use((req, res, next) => {
   // امنیت سیاست ارجاع
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // سیاست جامع امنیت محتوا (CSP) سازگار با پیش‌نمایش آی‌فریم و باز شدن در تب جدید
+  // سیاست جامع امنیت محتوا (CSP) بدون محدودسازی فریم پیش‌نمایش
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; " +
-    "img-src 'self' https: data: blob:; " +
-    "font-src 'self' https: data: https://fonts.gstatic.com; " +
-    "style-src 'self' 'unsafe-inline' https: https://fonts.googleapis.com; " +
-    "frame-ancestors 'self' https://*.google.com https://*.googleusercontent.com https://*.run.app https://ai.studio https://*.aistudio.google.com;"
+    "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; " +
+    "img-src 'self' https: http: data: blob:; " +
+    "font-src 'self' https: http: data: https://fonts.gstatic.com; " +
+    "style-src 'self' 'unsafe-inline' https: http: https://fonts.googleapis.com; " +
+    "frame-ancestors *;"
   );
 
   next();

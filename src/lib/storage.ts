@@ -1958,10 +1958,10 @@ export const storage = {
     return storage.getForms().filter(f => f.isPublished);
   },
 
-  saveForms: (forms: FormItem[]) => {
+  saveForms: (forms: FormItem[], notify: boolean = false) => {
     try {
       localStorage.setItem(FORMS_KEY, JSON.stringify(forms));
-      if (typeof window !== 'undefined') {
+      if (notify && typeof window !== 'undefined') {
         window.dispatchEvent(new Event('kowsar_forms_changed'));
       }
     } catch (quotaErr) {
@@ -1974,7 +1974,7 @@ export const storage = {
           return f;
         });
         localStorage.setItem(FORMS_KEY, JSON.stringify(sanitized));
-        if (typeof window !== 'undefined') {
+        if (notify && typeof window !== 'undefined') {
           window.dispatchEvent(new Event('kowsar_forms_changed'));
         }
       } catch (inner) {
@@ -1992,7 +1992,7 @@ export const storage = {
       createdAt: new Date().toLocaleDateString('fa-IR'),
       updatedAt: new Date().toLocaleDateString('fa-IR')
     };
-    storage.saveForms([newForm, ...forms]);
+    storage.saveForms([newForm, ...forms], true);
 
     // Asynchronously call API
     try {
@@ -2037,9 +2037,9 @@ export const storage = {
       courseCode: formData.courseCode || ''
     };
 
-    // Save locally
+    // Save locally and notify only because a new file is created
     const current = storage.getForms().filter(f => f.id !== newForm.id);
-    storage.saveForms([newForm, ...current]);
+    storage.saveForms([newForm, ...current], true);
 
     try {
       const headers = getAdminAuthHeaders();
@@ -2080,7 +2080,7 @@ export const storage = {
             courseCode: item.course_code || ''
           };
           const updatedList = storage.getForms().map(f => f.id === tempId ? parsedItem : f);
-          storage.saveForms(updatedList);
+          storage.saveForms(updatedList, false);
           return parsedItem;
         }
       }
@@ -2122,7 +2122,7 @@ export const storage = {
 
   deleteForm: (id: string) => {
     const forms = storage.getForms().filter(f => f.id !== id);
-    storage.saveForms(forms);
+    storage.saveForms(forms, true);
     try {
       const headers = getAdminAuthHeaders();
       fetch(`/api/forms/${id}`, { method: 'DELETE', headers }).catch(e => console.error('Delete API error:', e));
@@ -2131,7 +2131,7 @@ export const storage = {
 
   deleteFormFromDB: async (id: string): Promise<boolean> => {
     const forms = storage.getForms().filter(f => f.id !== id);
-    storage.saveForms(forms);
+    storage.saveForms(forms, true);
     try {
       const headers = getAdminAuthHeaders();
       const res = await fetch(`/api/forms/${id}`, {
@@ -2883,7 +2883,7 @@ export const storage = {
           }
 
           const mergedForms = [...unsyncedLocals, ...dbForms];
-          storage.saveForms(mergedForms);
+          storage.saveForms(mergedForms, false);
           return mergedForms;
         }
       }

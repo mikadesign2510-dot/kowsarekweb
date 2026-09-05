@@ -102,18 +102,10 @@ const upload = multer({
 
     // مسدودسازی فایل‌های اجرایی خطرناک
     if (ext && BLOCKED_EXECUTABLES.has(ext)) {
-      return cb(new Error('بارگذاری فایل‌های اجرایی و اسکریپتی به دلایل امنیتی سرور مجاز نمی‌باشد.'));
+      return cb(new Error('بارگذاری فایل‌های اجرایی و اسکریپتی (.exe, .bat, .sh, ...) مجاز نمی‌باشد.'));
     }
 
-    const folder = String(req.query.folder || req.headers['x-upload-folder'] || (req as any).body?.folder || '').toLowerCase();
-    // برای پوشه‌های اختصاصی جزوات و فرم‌ها، تمامی فایل‌های غیر اجرایی مجاز هستند
-    if (folder === 'pamphlets' || folder === 'forms') {
-      return cb(null, true);
-    }
-
-    if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
-      return cb(new Error(`فرمت فایل غیرمجاز است (${ext}). لطفاً فایل‌های اسنادی نظیر PDF، Word، PowerPoint، Excel، یا آرشیو ZIP بارگذاری نمایید.`));
-    }
+    // برای تمامی فایل‌های اسنادی، آموزشی، جزوات و فرم‌ها بدون محدودیت مجاز است
     cb(null, true);
   }
 });

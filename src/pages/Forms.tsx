@@ -36,12 +36,14 @@ export default function FormsPage() {
     };
 
     const handleFormsChanged = () => {
-      loadForms();
+      const localList = storage.getForms().filter(f => f.isPublished !== false);
+      setForms(localList);
     };
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'kowsar_forms' || e.key === null) {
-        loadForms();
+        const localList = storage.getForms().filter(f => f.isPublished !== false);
+        setForms(localList);
       }
     };
 
