@@ -6,7 +6,9 @@ import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 import { 
   PamphletHighlightPicker, 
   getPamphletHighlight, 
-  PAMPHLET_HIGHLIGHT_PRESETS 
+  PAMPHLET_HIGHLIGHT_PRESETS,
+  PinnedCornerRibbon,
+  FeaturedPamphletBadge
 } from '../../components/PamphletCover';
 import { 
   Plus, Edit2, Trash2, Search, Filter, Eye,
@@ -106,8 +108,8 @@ export default function AdminForms() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCustomField, setIsCustomField] = useState(false);
 
-  // Active Tab inside Editor Modal: 'details' | 'file' | 'instructions' | 'preview'
-  const [editorTab, setEditorTab] = useState<'details' | 'file' | 'instructions' | 'preview'>('details');
+  // Active Tab inside Editor Modal: 'details' | 'instructions' | 'preview'
+  const [editorTab, setEditorTab] = useState<'details' | 'instructions' | 'preview'>('details');
 
   // Custom Category creation input
   const [customCategory, setCustomCategory] = useState('');
@@ -118,6 +120,7 @@ export default function AdminForms() {
   const [instructionInput, setInstructionInput] = useState('');
   const [attachmentInput, setAttachmentInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
@@ -360,46 +363,72 @@ export default function AdminForms() {
     }
   };
 
+  const processFileForUpload = async (file: File) => {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toUpperCase() || 'PDF';
+    const cleanName = file.name.substring(0, file.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim();
+    const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(2)} مگابایت`;
+    
+    setIsUploading(true);
+    setFormError(null);
+    try {
+      const uploadFolder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
+      const result = await uploadFileToServer(file, uploadFolder);
+      if (result.success && result.url) {
+        setFormData(prev => ({
+          ...prev,
+          title: prev.title.trim() ? prev.title : cleanName,
+          fileUrl: result.url,
+          fileSize: result.sizeFormatted || fileSizeFormatted,
+          fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
+        }));
+        fetchFoldersStats();
+        fetchServerFiles();
+        setSaveSuccessMessage(`فایل جدید "${file.name}" با موفقیت روی سرور بارگذاری و ثبت گردید.`);
+        setTimeout(() => setSaveSuccessMessage(null), 5000);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          title: prev.title.trim() ? prev.title : cleanName,
+          fileSize: fileSizeFormatted,
+          fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
+        }));
+        setFormError(result.message || 'خطا در بارگذاری فایل در سرور. لطفاً مجدداً تلاش کنید یا لینک مستقیم وارد نمایید.');
+      }
+    } catch (err: any) {
+      setFormError('خطا در ارتباط با سرور: ' + (err?.message || 'پاسخ نامعتبر'));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const ext = file.name.split('.').pop()?.toUpperCase() || 'PDF';
-      const cleanName = file.name.substring(0, file.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim();
-      const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(2)} مگابایت`;
-      
-      setIsUploading(true);
-      setFormError(null);
-      try {
-        const uploadFolder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
-        const result = await uploadFileToServer(file, uploadFolder);
-        if (result.success && result.url) {
-          setFormData(prev => ({
-            ...prev,
-            title: prev.title.trim() ? prev.title : cleanName,
-            fileUrl: result.url,
-            fileSize: result.sizeFormatted || fileSizeFormatted,
-            fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
-          }));
-          fetchFoldersStats();
-          fetchServerFiles();
-          setSaveSuccessMessage(`فایل "${file.name}" با موفقیت بارگذاری شد.`);
-          setTimeout(() => setSaveSuccessMessage(null), 4000);
-        } else {
-          // در صورت بروز خطا در ذخیره، عنوان و فرمت را حفظ و پیام راهنمای شفاف نمایش می‌دهیم
-          setFormData(prev => ({
-            ...prev,
-            title: prev.title.trim() ? prev.title : cleanName,
-            fileSize: fileSizeFormatted,
-            fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
-          }));
-          setFormError(result.message || 'خطا در بارگذاری فایل در سرور. لطفاً آدرس یا لینک فایل را بررسی کنید.');
-        }
-      } catch (err: any) {
-        setFormError('خطا در ارتباط با سرور: ' + (err?.message || 'پاسخ نامعتبر'));
-      } finally {
-        setIsUploading(false);
-        if (e.target) e.target.value = '';
-      }
+      await processFileForUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processFileForUpload(file);
     }
   };
 
@@ -1867,14 +1896,15 @@ export default function AdminForms() {
                           <td className="p-4 text-center">
                             <button
                               onClick={() => handleTogglePin(item.id)}
-                              className={`p-1.5 rounded-xl transition-all ${
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-black inline-flex items-center gap-1 transition-all ${
                                 item.isPinned
-                                  ? 'bg-amber-100 text-amber-600 shadow-sm'
-                                  : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs shadow-amber-500/30 ring-1 ring-amber-300'
+                                  : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
                               }`}
                               title={item.isPinned ? 'حذف از منتخب‌ها' : 'انتخاب به عنوان جزوه برگزیده'}
                             >
-                              <Sparkles className="w-4 h-4" />
+                              <Sparkles className="w-3.5 h-3.5" />
+                              {item.isPinned ? 'منتخب' : 'عادی'}
                             </button>
                           </td>
 
@@ -1884,6 +1914,18 @@ export default function AdminForms() {
 
                           <td className="p-4 text-left">
                             <div className="flex items-center justify-end gap-1.5">
+                              {item.fileUrl && (
+                                <a
+                                  href={item.fileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="مشاهده / دانلود فایل جزوه"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+
                               <button
                                 onClick={() => handleOpenEdit(item)}
                                 className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
@@ -1919,8 +1961,12 @@ export default function AdminForms() {
                 return (
                   <div
                     key={item.id}
-                    className={`${highlight.cardBg} ${highlight.topBarClass} rounded-3xl p-6 border transition-all duration-200 flex flex-col justify-between relative group ${
-                      isSelected ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' : `${highlight.cardBorder} ${highlight.hoverBorder} shadow-sm hover:shadow-md`
+                    className={`${highlight.cardBg} ${
+                      item.isPinned 
+                        ? 'border-amber-300/90 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/10 border-t-[3.5px] border-t-amber-500' 
+                        : `${highlight.cardBorder} ${highlight.topBarClass} shadow-xs`
+                    } ${highlight.hoverBorder} rounded-3xl p-6 border transition-all duration-300 flex flex-col justify-between relative group ${
+                      isSelected ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' : 'hover:shadow-xl'
                     }`}
                   >
                     <div className="space-y-3.5">
@@ -1944,15 +1990,15 @@ export default function AdminForms() {
                               e.stopPropagation();
                               handleTogglePin(item.id);
                             }}
-                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1 transition-all ${
+                            className={`px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-1.5 transition-all ${
                               item.isPinned
-                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
-                                : 'bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-700 border border-slate-200/80'
+                                ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-xs shadow-amber-500/30 ring-1 ring-amber-300/50'
+                                : 'bg-white hover:bg-amber-50 text-slate-500 hover:text-amber-700 border border-slate-200/80 shadow-2xs'
                             }`}
                             title={item.isPinned ? 'کلیک برای حذف از منتخب‌ها' : 'کلیک برای افزودن به منتخب‌ها'}
                           >
-                            <Sparkles className="w-3 h-3" />
-                            {item.isPinned ? 'منتخب ⭐' : 'عادی'}
+                            <Sparkles className="w-3.5 h-3.5 text-amber-100" />
+                            {item.isPinned ? 'منتخب ترم ⭐' : 'عادی'}
                           </button>
                         </div>
 
@@ -2534,7 +2580,7 @@ export default function AdminForms() {
             </div>
 
             {/* Modal Sub-Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0">
+            <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setEditorTab('details')}
@@ -2545,20 +2591,7 @@ export default function AdminForms() {
                 }`}
               >
                 <FileCheck className="w-4 h-4 shrink-0" />
-                <span className="truncate">{formData.itemType === 'pamphlet' ? 'مشخصات درس و جزوه' : 'مشخصات اصلی فرم'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditorTab('file')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
-                  editorTab === 'file'
-                    ? (formData.itemType === 'pamphlet' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25' : 'bg-blue-600 text-white shadow-sm shadow-blue-600/25')
-                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/70 hover:bg-slate-50'
-                }`}
-              >
-                <Upload className="w-4 h-4 shrink-0" />
-                <span className="truncate">فایل و لینک دانلود</span>
+                <span className="truncate">{formData.itemType === 'pamphlet' ? 'مشخصات و بارگذاری فایل' : 'مشخصات و بارگذاری فایل'}</span>
               </button>
 
               <button
@@ -2590,6 +2623,15 @@ export default function AdminForms() {
 
             {/* Modal Body Form with noValidate to prevent URL error bugs */}
             <form onSubmit={handleSave} noValidate className="flex flex-col flex-1 overflow-hidden">
+              {/* Persistent hidden file input accessible from any tab */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.7z,.pptx,.ppt,.txt,.epub,.djvu"
+              />
+
               <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 admin-modal-body">
                 {formError && (
                   <div className="p-4 bg-red-50 text-red-700 text-xs font-bold rounded-2xl border border-red-200 flex items-center justify-between animate-in fade-in">
@@ -2598,6 +2640,18 @@ export default function AdminForms() {
                       <span>{formError}</span>
                     </div>
                     <button type="button" onClick={() => setFormError(null)} className="text-red-400 hover:text-red-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {saveSuccessMessage && (
+                  <div className="p-4 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-2xl border border-emerald-200 flex items-center justify-between animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{saveSuccessMessage}</span>
+                    </div>
+                    <button type="button" onClick={() => setSaveSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-700">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -2859,21 +2913,22 @@ export default function AdminForms() {
                       </div>
                     )}
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        {formData.itemType === 'pamphlet' ? 'توضیحات و خلاصه سرفصل‌های جزوه' : 'توضیحات، هدف و کاربرد فرم'}
-                      </label>
-                      <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        rows={3}
-                        placeholder={formData.itemType === 'pamphlet' 
-                          ? 'خلاصه مباحث تدریس شده، اهمیت درس و راهنمای استفاده از جزوه...' 
-                          : 'توضیح دهید این فرم ویژه چه دانشجویانی است و چه کاربردی دارد...'}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                    {/* Description - only for administrative forms */}
+                    {formData.itemType !== 'pamphlet' && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-2">
+                          توضیحات، هدف و کاربرد فرم
+                        </label>
+                        <textarea
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          rows={3}
+                          placeholder="توضیح دهید این فرم ویژه چه دانشجویانی است و چه کاربردی دارد..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
 
                     {/* Tags - Only for Forms */}
                     {formData.itemType !== 'pamphlet' && (
@@ -2917,7 +2972,181 @@ export default function AdminForms() {
                       </div>
                     )}
 
-                    {/* Pamphlet Color Highlight Picker */}
+                    {/* FILE ATTACHMENT & REPLACEMENT (Integrated in primary tab) */}
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                            <Upload className="w-4 h-4 text-indigo-600" />
+                            {formData.itemType === 'pamphlet' ? 'فایل جزوه و دانلود مستقیم' : 'فایل فرم و دانلود مستقیم'}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {editingId ? 'می‌توانید فایل فعلی را تست یا فایل جدیدی را جایگزین نمایید.' : 'فایل را برای ذخیره در سرور آپلود کنید.'}
+                          </p>
+                        </div>
+
+                        {formData.fileUrl ? (
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-200">
+                            <Check className="w-3.5 h-3.5" />
+                            دارای فایل پیوست
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full flex items-center gap-1 border border-amber-200">
+                            بدون فایل
+                          </span>
+                        )}
+                      </div>
+
+                      {/* File Format & Size Controls */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1.5">فرمت فایل *</label>
+                          <select
+                            name="fileFormat"
+                            value={formData.fileFormat}
+                            onChange={handleInputChange}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="PDF">PDF (سند پی‌دی‌اف)</option>
+                            <option value="DOCX">DOCX / Word (ورد)</option>
+                            <option value="PPTX">PPTX / PowerPoint (اسلاید)</option>
+                            <option value="XLSX">XLSX / Excel (اکسل)</option>
+                            <option value="ZIP">ZIP (فایل فشرده)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1.5">حجم فایل (خودکار هنگام آپلود یا دستی)</label>
+                          <input
+                            type="text"
+                            name="fileSize"
+                            value={formData.fileSize}
+                            onChange={handleInputChange}
+                            placeholder="مثلاً: ۲.۴ مگابایت"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Attached File Preview Card */}
+                      {formData.fileUrl ? (
+                        <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-[10px] font-black">
+                                {formData.fileFormat || 'PDF'}
+                              </span>
+                              <span className="text-xs font-bold text-slate-800 font-mono truncate max-w-[260px] sm:max-w-md" dir="ltr">
+                                {formData.fileUrl}
+                              </span>
+                              {formData.fileSize && (
+                                <span className="text-[10px] px-2 py-0.5 bg-white text-slate-600 rounded-md border border-slate-200">
+                                  {formData.fileSize}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={formData.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors border border-slate-200"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                تست دانلود فایل
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, fileUrl: '', fileSize: '' }))}
+                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                                title="حذف پیوند فایل"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Dropzone for Uploading / Replacing */}
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`p-5 rounded-2xl border-2 border-dashed transition-all text-center flex flex-col items-center justify-center gap-2.5 ${
+                          isDraggingFile 
+                            ? 'border-indigo-500 bg-indigo-50/80 scale-[1.01]' 
+                            : 'border-slate-300 hover:border-indigo-400 bg-white'
+                        }`}
+                      >
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                          {isUploading ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Upload className="w-5 h-5" />
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-black text-slate-800">
+                            {isUploading 
+                              ? 'در حال آپلود و ذخیره فایل در سرور...' 
+                              : editingId 
+                                ? 'برای جایگزینی، فایل جدید جزوه را اینجا بکشید یا دکمه زیر را بزنید' 
+                                : 'فایل جزوه را اینجا بکشید یا انتخاب کنید'}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            فرمت‌های مجاز: PDF, Word, PowerPoint, Excel, ZIP (بدون محدودیت حجم روی سرور)
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {editingId ? 'انتخاب و آپلود فایل جدید' : 'انتخاب فایل از کامپیوتر'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const folder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
+                              setSelectedServerFolder(folder);
+                              fetchServerFiles(folder);
+                              setShowServerFilePicker(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
+                          >
+                            <FolderOpen className="w-4 h-4 text-emerald-600" />
+                            انتخاب از آرشیو سرور
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Direct manual URL/path input */}
+                      <div className="pt-1">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                          آدرس یا مسیر فایل روی سرور (اختیاری):
+                        </label>
+                        <input
+                          type="text"
+                          name="fileUrl"
+                          value={formData.fileUrl}
+                          onChange={handleInputChange}
+                          placeholder="/uploads/pamphlets/sample.pdf یا لینک مستقیم"
+                          dir="ltr"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-left font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pamphlet Color Highlight Picker - Placed DIRECTLY below upload box as requested */}
                     {formData.itemType === 'pamphlet' && (
                       <div className="pt-4 border-t border-slate-100">
                         <PamphletHighlightPicker
@@ -2928,142 +3157,7 @@ export default function AdminForms() {
                       </div>
                     )}
 
-                  </div>
-                )}
-
-                {/* TAB 2: FILE & UPLOAD */}
-                {editorTab === 'file' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-2">فرمت فایل *</label>
-                        <select
-                          name="fileFormat"
-                          value={formData.fileFormat}
-                          onChange={handleInputChange}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="PDF">PDF (سند پی‌دی‌اف)</option>
-                          <option value="DOCX">DOCX / Word (ورد)</option>
-                          <option value="PPTX">PPTX / PowerPoint (اسلاید)</option>
-                          <option value="XLSX">XLSX / Excel (اکسل)</option>
-                          <option value="ZIP">ZIP (فایل فشرده)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-2">حجم تخمینی فایل</label>
-                        <input
-                          type="text"
-                          name="fileSize"
-                          value={formData.fileSize}
-                          onChange={handleInputChange}
-                          placeholder="مثلاً: ۲.۴ مگابایت"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Direct Upload into Server */}
-                    <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center">
-                          <Upload className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-black text-blue-950">بارگذاری مستقیم فایل در سرور دانشگاه</h4>
-                          <p className="text-[11px] text-blue-700/80">فایل را انتخاب کنید تا با نام استاندارد در سرور ذخیره شود.</p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.7z,.pptx,.ppt,.txt,.epub,.djvu"
-                        />
-                        <button
-                          type="button"
-                          disabled={isUploading}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-xs px-5 py-3 rounded-2xl transition-colors shadow-sm"
-                        >
-                          {isUploading ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                              در حال ارسال به سرور...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4" />
-                              انتخاب و بارگذاری مستقیم در سرور
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const folder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
-                            setSelectedServerFolder(folder);
-                            fetchServerFiles(folder);
-                            setShowServerFilePicker(true);
-                          }}
-                          className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl transition-colors shadow-sm"
-                        >
-                          <FolderOpen className="w-4 h-4 text-emerald-600" />
-                          انتخاب از فایل‌های ذخیره‌شده در سرور
-                        </button>
-
-                        <span className="text-xs text-slate-400 w-full sm:w-auto">
-                          مسیر سرور: <code className="font-mono text-[11px] text-slate-600 font-bold" dir="ltr">/uploads/{formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms'}/</code> (نامحدود)
-                        </span>
-                      </div>
-
-                      {formData.fileUrl && (
-                        <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl border border-emerald-200 text-xs font-bold flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span className="truncate">فایل ثبت شد: <span className="font-mono text-emerald-900" dir="ltr">{formData.fileUrl}</span></span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">{formData.fileSize}</span>
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, fileUrl: '', fileSize: '' }))}
-                              className="p-1 hover:bg-rose-100 rounded-lg text-rose-600 transition-colors"
-                              title="حذف پیوند فایل"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Direct URL Input (Type="text" to prevent HTML5 URL validation errors on relative server paths) */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        آدرس فایل یا لینک دانلود مستقیم (اختیاری)
-                      </label>
-                      <input
-                        type="text"
-                        name="fileUrl"
-                        value={formData.fileUrl}
-                        onChange={handleInputChange}
-                        placeholder="https://example.com/file.pdf یا /uploads/forms/sample.pdf"
-                        dir="ltr"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs text-left focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
-                      <p className="text-[11px] text-slate-400 mt-1.5">
-                        هم آدرس‌های اینترنتی کامل (https://...) و هم مسیرهای مستقیم ذخیره شده در سرور پشتیبانی می‌شوند.
-                      </p>
-                    </div>
-
-                    {/* Publishing & Priority Toggles */}
+                    {/* Publishing & Priority Toggles - Placed in first tab as requested */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                       <label className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition-colors">
                         <input
@@ -3071,7 +3165,7 @@ export default function AdminForms() {
                           name="isPublished"
                           checked={formData.isPublished}
                           onChange={handleInputChange}
-                          className="w-4 h-4 text-blue-600 rounded"
+                          className="w-4 h-4 text-indigo-600 rounded"
                         />
                         <div>
                           <span className="text-xs font-bold text-slate-800 block">انتشار عمومی در پورتال</span>
@@ -3085,16 +3179,18 @@ export default function AdminForms() {
                           name="isPinned"
                           checked={formData.isPinned}
                           onChange={handleInputChange}
-                          className="w-4 h-4 text-blue-600 rounded"
+                          className="w-4 h-4 text-amber-500 rounded"
                         />
                         <div>
-                          <span className="text-xs font-bold text-slate-800 block">
-                            {formData.itemType === 'pamphlet' ? 'جزوه برگزیده و ویژه ترم' : 'فرم ویژه و ضروری (سنجاق در صدر)'}
+                          <span className="text-xs font-bold text-slate-800 block flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                            {formData.itemType === 'pamphlet' ? 'جزوه برگزیده و ویژه ترم (منتخب)' : 'فرم ویژه و ضروری (سنجاق در صدر)'}
                           </span>
-                          <span className="text-[11px] text-slate-400">با برچسب ویژه و اولویت بالا در بالای لیست قرار می‌گیرد</span>
+                          <span className="text-[11px] text-slate-400">با نشان ویژه و کادر برجسته در صدر لیست نمایش داده می‌شود</span>
                         </div>
                       </label>
                     </div>
+
                   </div>
                 )}
 
@@ -3193,75 +3289,112 @@ export default function AdminForms() {
                   </div>
                 )}
 
-                {/* TAB 4: LIVE PREVIEW */}
+                {/* TAB 3: LIVE PREVIEW */}
                 {editorTab === 'preview' && (() => {
+                  const isPamphlet = formData.itemType === 'pamphlet';
+                  const isPinnedPamphlet = isPamphlet && formData.isPinned;
                   const previewHighlight = getPamphletHighlight(formData.frameColor, formData.fieldOfStudy);
                   return (
                     <div className="space-y-6 animate-in fade-in duration-200">
-                      <p className="text-xs text-slate-400">پیش‌نمایش ظاهر نهایی این کارت برای دانشجویان:</p>
+                      <p className="text-xs text-slate-500 font-medium">پیش‌نمایش ظاهر نهایی این کارت برای دانشجویان در پورتال:</p>
                       
-                      <div className={`${formData.itemType === 'pamphlet' ? `${previewHighlight.cardBg} ${previewHighlight.cardBorder} ${previewHighlight.topBarClass}` : 'bg-white border-slate-200'} rounded-3xl p-6 border shadow-md max-w-md mx-auto space-y-4`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
-                              {formData.code || (formData.itemType === 'pamphlet' ? 'BOK-101' : 'FORM-101')}
+                      <div className={`${
+                        isPamphlet 
+                          ? `${previewHighlight.cardBg} ${
+                              isPinnedPamphlet 
+                                ? 'border-amber-300/90 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/10' 
+                                : `${previewHighlight.cardBorder} shadow-sm`
+                            } ${isPinnedPamphlet ? 'border-t-[3.5px] border-t-amber-500' : previewHighlight.topBarClass}` 
+                          : 'bg-white border-slate-200 shadow-sm'
+                      } rounded-3xl p-6 border max-w-md mx-auto relative overflow-hidden transition-all duration-300 flex flex-col justify-between`}>
+                        
+                        {/* Pinned Distinctive Ribbon for Featured Pamphlet */}
+                        {isPinnedPamphlet && (
+                          <PinnedCornerRibbon isPinned={true} />
+                        )}
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span className="font-mono text-xs font-black px-2.5 py-1 bg-white/95 text-slate-700 rounded-xl border border-slate-200/80 shadow-2xs">
+                                {formData.code || (isPamphlet ? 'BOK-101' : 'FORM-101')}
+                              </span>
+                              {isPamphlet ? (
+                                isPinnedPamphlet && (
+                                  <FeaturedPamphletBadge isPinned={true} />
+                                )
+                              ) : (
+                                formData.isPinned && (
+                                  <span className="bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shadow-sm">
+                                    <Sparkles className="w-3 h-3" />
+                                    فرم ویژه
+                                  </span>
+                                )
+                              )}
+                              {isPamphlet && (
+                                <span className={`${previewHighlight.badgeBg} ${previewHighlight.badgeText} border ${previewHighlight.badgeBorder} px-2.5 py-1 rounded-xl text-[10px] font-black shadow-2xs`}>
+                                  جزوه درسی
+                                </span>
+                              )}
+                            </div>
+
+                            <span className="text-xs font-black px-2.5 py-1 rounded-xl border bg-white text-slate-700 border-slate-200 shadow-2xs">
+                              {formData.fileFormat || 'PDF'}
                             </span>
-                            {formData.isPinned && (
-                              <span className="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 shadow-sm">
-                                <Sparkles className="w-3 h-3" />
-                                {formData.itemType === 'pamphlet' ? 'منتخب ترم' : 'ویژه'}
-                              </span>
-                            )}
-                            {formData.itemType === 'pamphlet' && (
-                              <span className={`${previewHighlight.badgeBg} ${previewHighlight.badgeText} border ${previewHighlight.badgeBorder} px-2 py-0.5 rounded text-[10px] font-bold`}>
-                                جزوه درسی
-                              </span>
+                          </div>
+
+                          <div>
+                            <h3 className="text-base font-black text-slate-900 leading-snug">
+                              {formData.title || 'عنوان نمونه جزوه / فرم'}
+                            </h3>
+                            {isPamphlet ? (
+                              <div className="space-y-2 mt-2">
+                                {formData.professorName && (
+                                  <div className={`inline-flex items-center gap-1.5 text-xs ${previewHighlight.teacherText} font-bold bg-white/80 px-2.5 py-1 rounded-xl border border-slate-200/60 shadow-2xs`}>
+                                    <User className="w-3.5 h-3.5 shrink-0" />
+                                    <span>مدرس: {formData.professorName}</span>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                                  {formData.fieldOfStudy && (
+                                    <span className="flex items-center gap-1.5 bg-white/95 text-slate-700 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
+                                      <GraduationCap className="w-3 h-3 text-slate-500" />
+                                      {formData.fieldOfStudy}
+                                    </span>
+                                  )}
+                                  {formData.degreeLevel && (
+                                    <span className="bg-white/95 text-slate-600 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
+                                      {formData.degreeLevel}
+                                    </span>
+                                  )}
+                                  {formData.academicTerm && (
+                                    <span className="bg-white/95 text-slate-500 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
+                                      {formData.academicTerm}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold mt-2">
+                                <Building2 className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                                <span>{formData.department || 'اداره آموزش'}</span>
+                              </div>
                             )}
                           </div>
 
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-md border bg-slate-100 text-slate-700 border-slate-200">
-                            {formData.fileFormat}
-                          </span>
-                        </div>
-
-                        <div>
-                          <h3 className="text-base font-black text-slate-900 leading-snug">
-                            {formData.title || 'عنوان نمونه'}
-                          </h3>
-                          {formData.professorName && (
-                            <p className={`text-xs font-bold ${previewHighlight.teacherText} mt-1 flex items-center gap-1`}>
-                              <User className="w-3.5 h-3.5" />
-                              <span>مدرس: {formData.professorName}</span>
+                          {formData.description && (
+                            <p className="text-slate-500 text-xs leading-relaxed font-light line-clamp-3">
+                              {formData.description}
                             </p>
                           )}
-                        </div>
 
-                        <p className="text-slate-500 text-xs leading-relaxed font-light line-clamp-3">
-                          {formData.description || 'توضیحات و جزئیات مربوطه در این قسمت برای دانشجو نمایش داده می‌شود.'}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
-                          {formData.fieldOfStudy && (
-                            <span className="bg-white/90 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
-                              <GraduationCap className="w-3 h-3 text-slate-500" />
-                              {formData.fieldOfStudy}
-                            </span>
-                          )}
-                          {formData.degreeLevel && (
-                            <span className="bg-white/90 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
-                              {formData.degreeLevel}
-                            </span>
-                          )}
-                          {formData.pageCount && (
-                            <span className={`${previewHighlight.badgeBg} ${previewHighlight.badgeText} border ${previewHighlight.badgeBorder} px-2 py-0.5 rounded-md font-bold`}>
-                              {formData.pageCount}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                          <span>حجم: <strong>{formData.fileSize || '۱ MB'}</strong></span>
-                          <span>وضعیت: <strong>{formData.isPublished ? 'منتشر شده' : 'پیش‌نویس'}</strong></span>
+                          <div className="pt-4 border-t border-slate-100/90 flex items-center justify-between text-xs text-slate-500">
+                            <span>حجم: <strong className="text-slate-700">{formData.fileSize || '۱ MB'}</strong></span>
+                            {formData.pageCount && (
+                              <span>تعداد صفحات: <strong className="text-slate-700">{formData.pageCount}</strong></span>
+                            )}
+                            <span>وضعیت: <strong className={formData.isPublished ? 'text-emerald-700' : 'text-amber-700'}>{formData.isPublished ? 'منتشر شده' : 'پیش‌نویس'}</strong></span>
+                          </div>
                         </div>
                       </div>
                     </div>

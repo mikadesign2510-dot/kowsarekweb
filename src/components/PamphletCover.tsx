@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Sparkles, Wand2 } from 'lucide-react';
+import { Check, Sparkles, Wand2, Star } from 'lucide-react';
 
 export interface PamphletHighlightPreset {
   id: string;
@@ -14,6 +14,7 @@ export interface PamphletHighlightPreset {
   badgeBorder: string;
   teacherText: string;
   accentHex: string;
+  buttonClass?: string;
 }
 
 export const PAMPHLET_HIGHLIGHT_PRESETS: PamphletHighlightPreset[] = [
@@ -21,115 +22,154 @@ export const PAMPHLET_HIGHLIGHT_PRESETS: PamphletHighlightPreset[] = [
     id: 'indigo',
     name: 'هایلایت نیلی (کامپیوتر و IT)',
     dotClass: 'bg-indigo-600',
-    cardBg: 'bg-gradient-to-br from-indigo-100/95 via-indigo-50/50 to-white',
-    cardBorder: 'border-indigo-200/90',
-    topBarClass: 'border-t-4 border-t-indigo-500',
-    hoverBorder: 'hover:border-indigo-400 hover:shadow-indigo-100/60',
-    badgeBg: 'bg-indigo-100/90',
-    badgeText: 'text-indigo-800',
-    badgeBorder: 'border-indigo-300/80',
+    cardBg: 'bg-gradient-to-b from-indigo-50/70 via-white to-white',
+    cardBorder: 'border-indigo-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-indigo-500',
+    hoverBorder: 'hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10',
+    badgeBg: 'bg-indigo-50',
+    badgeText: 'text-indigo-700',
+    badgeBorder: 'border-indigo-200/80',
     teacherText: 'text-indigo-700',
     accentHex: '#6366f1',
+    buttonClass: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
   },
   {
     id: 'emerald',
     name: 'هایلایت زمردی (حسابداری و مالی)',
     dotClass: 'bg-emerald-600',
-    cardBg: 'bg-gradient-to-br from-emerald-100/95 via-emerald-50/50 to-white',
-    cardBorder: 'border-emerald-200/90',
-    topBarClass: 'border-t-4 border-t-emerald-500',
-    hoverBorder: 'hover:border-emerald-400 hover:shadow-emerald-100/60',
-    badgeBg: 'bg-emerald-100/90',
+    cardBg: 'bg-gradient-to-b from-emerald-50/70 via-white to-white',
+    cardBorder: 'border-emerald-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-emerald-500',
+    hoverBorder: 'hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/10',
+    badgeBg: 'bg-emerald-50',
     badgeText: 'text-emerald-800',
-    badgeBorder: 'border-emerald-300/80',
+    badgeBorder: 'border-emerald-200/80',
     teacherText: 'text-emerald-700',
     accentHex: '#10b981',
+    buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
   },
   {
     id: 'amber',
     name: 'هایلایت کهربایی (حقوق و علوم قضایی)',
     dotClass: 'bg-amber-600',
-    cardBg: 'bg-gradient-to-br from-amber-100/95 via-amber-50/50 to-white',
-    cardBorder: 'border-amber-200/90',
-    topBarClass: 'border-t-4 border-t-amber-500',
-    hoverBorder: 'hover:border-amber-400 hover:shadow-amber-100/60',
-    badgeBg: 'bg-amber-100/90',
+    cardBg: 'bg-gradient-to-b from-amber-50/70 via-white to-white',
+    cardBorder: 'border-amber-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-amber-500',
+    hoverBorder: 'hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/10',
+    badgeBg: 'bg-amber-50',
     badgeText: 'text-amber-900',
-    badgeBorder: 'border-amber-300/80',
+    badgeBorder: 'border-amber-200/80',
     teacherText: 'text-amber-800',
     accentHex: '#f59e0b',
+    buttonClass: 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-500/20'
   },
   {
     id: 'purple',
     name: 'هایلایت بنفش (گرافیک و طراحی دوخت)',
     dotClass: 'bg-purple-600',
-    cardBg: 'bg-gradient-to-br from-purple-100/95 via-purple-50/50 to-white',
-    cardBorder: 'border-purple-200/90',
-    topBarClass: 'border-t-4 border-t-purple-500',
-    hoverBorder: 'hover:border-purple-400 hover:shadow-purple-100/60',
-    badgeBg: 'bg-purple-100/90',
+    cardBg: 'bg-gradient-to-b from-purple-50/70 via-white to-white',
+    cardBorder: 'border-purple-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-purple-500',
+    hoverBorder: 'hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/10',
+    badgeBg: 'bg-purple-50',
     badgeText: 'text-purple-800',
-    badgeBorder: 'border-purple-300/80',
+    badgeBorder: 'border-purple-200/80',
     teacherText: 'text-purple-700',
     accentHex: '#a855f7',
+    buttonClass: 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20'
   },
   {
     id: 'rose',
     name: 'هایلایت رز و یاقوتی (معماری و هنر)',
     dotClass: 'bg-rose-600',
-    cardBg: 'bg-gradient-to-br from-rose-100/95 via-rose-50/50 to-white',
-    cardBorder: 'border-rose-200/90',
-    topBarClass: 'border-t-4 border-t-rose-500',
-    hoverBorder: 'hover:border-rose-400 hover:shadow-rose-100/60',
-    badgeBg: 'bg-rose-100/90',
+    cardBg: 'bg-gradient-to-b from-rose-50/70 via-white to-white',
+    cardBorder: 'border-rose-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-rose-500',
+    hoverBorder: 'hover:border-rose-300 hover:shadow-xl hover:shadow-rose-500/10',
+    badgeBg: 'bg-rose-50',
     badgeText: 'text-rose-800',
-    badgeBorder: 'border-rose-300/80',
+    badgeBorder: 'border-rose-200/80',
     teacherText: 'text-rose-700',
     accentHex: '#f43f5e',
+    buttonClass: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20'
   },
   {
     id: 'cyan',
     name: 'هایلایت فیروزه‌ای (مهندسی و صنایع)',
     dotClass: 'bg-cyan-600',
-    cardBg: 'bg-gradient-to-br from-cyan-100/95 via-cyan-50/50 to-white',
-    cardBorder: 'border-cyan-200/90',
-    topBarClass: 'border-t-4 border-t-cyan-500',
-    hoverBorder: 'hover:border-cyan-400 hover:shadow-cyan-100/60',
-    badgeBg: 'bg-cyan-100/90',
+    cardBg: 'bg-gradient-to-b from-cyan-50/70 via-white to-white',
+    cardBorder: 'border-cyan-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-cyan-500',
+    hoverBorder: 'hover:border-cyan-300 hover:shadow-xl hover:shadow-cyan-500/10',
+    badgeBg: 'bg-cyan-50',
     badgeText: 'text-cyan-800',
-    badgeBorder: 'border-cyan-300/80',
+    badgeBorder: 'border-cyan-200/80',
     teacherText: 'text-cyan-700',
     accentHex: '#06b6d4',
+    buttonClass: 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-cyan-500/20'
   },
   {
     id: 'blue',
     name: 'هایلایت آبی اقیانوسی (مدیریت و زبان)',
     dotClass: 'bg-blue-600',
-    cardBg: 'bg-gradient-to-br from-blue-100/95 via-blue-50/50 to-white',
-    cardBorder: 'border-blue-200/90',
-    topBarClass: 'border-t-4 border-t-blue-500',
-    hoverBorder: 'hover:border-blue-400 hover:shadow-blue-100/60',
-    badgeBg: 'bg-blue-100/90',
+    cardBg: 'bg-gradient-to-b from-blue-50/70 via-white to-white',
+    cardBorder: 'border-blue-100/90',
+    topBarClass: 'border-t-[3.5px] border-t-blue-500',
+    hoverBorder: 'hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10',
+    badgeBg: 'bg-blue-50',
     badgeText: 'text-blue-800',
-    badgeBorder: 'border-blue-300/80',
+    badgeBorder: 'border-blue-200/80',
     teacherText: 'text-blue-700',
     accentHex: '#3b82f6',
+    buttonClass: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
   },
   {
     id: 'slate',
     name: 'هایلایت نقره‌ای (دروس عمومی و پایه)',
     dotClass: 'bg-slate-600',
-    cardBg: 'bg-gradient-to-br from-slate-150/90 via-slate-100/50 to-white',
-    cardBorder: 'border-slate-300/90',
-    topBarClass: 'border-t-4 border-t-slate-500',
-    hoverBorder: 'hover:border-slate-400 hover:shadow-slate-100/60',
-    badgeBg: 'bg-slate-200/80',
+    cardBg: 'bg-gradient-to-b from-slate-50/70 via-white to-white',
+    cardBorder: 'border-slate-200/90',
+    topBarClass: 'border-t-[3.5px] border-t-slate-500',
+    hoverBorder: 'hover:border-slate-400 hover:shadow-xl hover:shadow-slate-400/10',
+    badgeBg: 'bg-slate-100',
     badgeText: 'text-slate-800',
     badgeBorder: 'border-slate-300',
     teacherText: 'text-slate-700',
     accentHex: '#64748b',
+    buttonClass: 'bg-slate-700 hover:bg-slate-800 text-white shadow-slate-600/20'
   },
 ];
+
+/**
+ * نشانگر برجسته و شیک برای جزوات منتخب
+ */
+export function FeaturedPamphletBadge({ isPinned, className = '' }: { isPinned?: boolean; className?: string }) {
+  if (!isPinned) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-white shadow-sm shadow-amber-500/30 ring-1 ring-amber-300/50 ${className}`}>
+      <Sparkles className="w-3.5 h-3.5 text-amber-100 shrink-0" />
+      <span>جزوه منتخب</span>
+    </span>
+  );
+}
+
+/**
+ * نشانگر برجسته بالای کارت برای تمایز چشم‌نواز جزوات منتخب (بدون بریدگی و تداخل)
+ */
+export function PinnedCornerRibbon({ isPinned, className = '' }: { isPinned?: boolean; className?: string }) {
+  if (!isPinned) return null;
+  return (
+    <div className={`-mt-6 -mx-6 mb-4 px-5 py-2 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-white rounded-t-[22px] flex items-center justify-between text-xs font-black shadow-xs ${className}`}>
+      <span className="inline-flex items-center gap-1.5">
+        <Star className="w-3.5 h-3.5 fill-amber-100 text-amber-100 shrink-0" />
+        <span>جزوه منتخب</span>
+      </span>
+      <span className="text-[10px] text-amber-100 font-bold bg-black/10 px-2 py-0.5 rounded-full">
+        برگزیده ویژه ترم
+      </span>
+    </div>
+  );
+}
 
 /**
  * Automatically maps any field of study name to an appropriate highlight color preset.

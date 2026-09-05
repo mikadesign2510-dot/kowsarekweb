@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { storage, FormItem } from '../lib/storage';
 import DynamicSidebar from '../components/DynamicSidebar';
-import { getPamphletHighlight } from '../components/PamphletCover';
+import { getPamphletHighlight, FeaturedPamphletBadge, PinnedCornerRibbon } from '../components/PamphletCover';
 import { 
   FileText, Download, Search, Filter, CheckCircle2, 
   HelpCircle, AlertCircle, Info, ExternalLink, ArrowLeft, 
   Calendar, Layers, Sparkles, Building2, Tag, FileCheck,
   FileType, FileSpreadsheet, Archive, Check, Eye, X, BookOpen,
-  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User
+  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User, Star
 } from 'lucide-react';
 
 export default function FormsPage() {
@@ -416,6 +416,7 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                   const isSuccess = downloadSuccessId === item.id;
                   const isPamphlet = item.itemType === 'pamphlet';
                   const highlight = isPamphlet ? getPamphletHighlight(item.frameColor, item.fieldOfStudy) : null;
+                  const isPinnedPamphlet = isPamphlet && item.isPinned;
 
                   return (
                     <motion.div
@@ -425,61 +426,81 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                       transition={{ delay: idx * 0.04 }}
                       className={`${
                         isPamphlet && highlight 
-                          ? `${highlight.cardBg} ${highlight.cardBorder} ${highlight.topBarClass} ${highlight.hoverBorder}` 
-                          : 'bg-white border-slate-200/90 hover:border-blue-300'
-                      } rounded-3xl p-6 border shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group relative`}
+                          ? `${highlight.cardBg} ${
+                              isPinnedPamphlet 
+                                ? 'border-amber-300/90 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/10 hover:shadow-2xl hover:shadow-amber-500/20' 
+                                : `${highlight.cardBorder} ${highlight.hoverBorder} shadow-xs hover:shadow-xl`
+                            } ${isPinnedPamphlet ? 'border-t-[3.5px] border-t-amber-500' : highlight.topBarClass}` 
+                          : 'bg-white border-slate-200/90 hover:border-blue-300 shadow-xs hover:shadow-xl'
+                      } rounded-3xl p-6 border transition-all duration-300 flex flex-col justify-between group relative`}
                     >
+                      {/* Pinned Distinctive Ribbon */}
+                      {isPinnedPamphlet && (
+                        <PinnedCornerRibbon isPinned={true} />
+                      )}
+
                       {/* Top Badges & Code */}
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <span className="font-mono text-xs font-black px-2.5 py-1 bg-white/95 text-slate-700 rounded-xl border border-slate-200/80 shadow-2xs">
                               {item.code || (isPamphlet ? 'BOK' : 'FORM')}
                             </span>
-                            {item.isPinned && (
-                              <span className="bg-amber-500 text-white px-2.5 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1 shadow-sm">
-                                <Sparkles className="w-3 h-3" />
-                                {isPamphlet ? 'منتخب ترم' : 'ضروری و ویژه'}
-                              </span>
+                            {isPamphlet ? (
+                              isPinnedPamphlet && (
+                                <FeaturedPamphletBadge isPinned={true} />
+                              )
+                            ) : (
+                              item.isPinned && (
+                                <span className="bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shadow-sm">
+                                  <Sparkles className="w-3 h-3" />
+                                  فرم ویژه
+                                </span>
+                              )
                             )}
                             {isPamphlet && highlight && (
-                              <span className={`${highlight.badgeBg} ${highlight.badgeText} border ${highlight.badgeBorder} px-2 py-0.5 rounded text-[10px] font-bold`}>
+                              <span className={`${highlight.badgeBg} ${highlight.badgeText} border ${highlight.badgeBorder} px-2.5 py-1 rounded-xl text-[10px] font-black shadow-2xs`}>
                                 جزوه درسی
                               </span>
                             )}
                           </div>
 
-                          <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-black border ${formatInfo.bg}`}>
+                          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black border shadow-2xs shrink-0 ${formatInfo.bg}`}>
                             <FormatIcon className="w-3.5 h-3.5" />
                             <span>{formatInfo.label}</span>
                           </div>
                         </div>
 
                         {/* Title & Professor/Department */}
-                        <h3 className={`text-base font-bold text-slate-900 mb-2 leading-snug transition-colors ${
+                        <h3 className={`text-base font-black text-slate-900 mb-2.5 leading-snug transition-colors ${
                           isPamphlet ? 'group-hover:text-indigo-600' : 'group-hover:text-blue-600'
                         }`}>
                           {item.title}
                         </h3>
 
                         {isPamphlet ? (
-                          <div className="space-y-1.5 mb-3">
+                          <div className="space-y-2 mb-3.5">
                             {item.professorName && (
-                              <div className={`flex items-center gap-1.5 text-xs ${highlight?.teacherText || 'text-indigo-700'} font-bold`}>
+                              <div className={`inline-flex items-center gap-1.5 text-xs ${highlight?.teacherText || 'text-indigo-700'} font-bold bg-white/80 px-2.5 py-1 rounded-xl border border-slate-200/60 shadow-2xs`}>
                                 <User className="w-3.5 h-3.5 shrink-0" />
                                 <span>مدرس: {item.professorName}</span>
                               </div>
                             )}
-                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
                               {item.fieldOfStudy && (
-                                <span className="flex items-center gap-1 bg-white/90 text-slate-700 border border-slate-200/80 px-2 py-0.5 rounded-md font-medium">
+                                <span className="flex items-center gap-1.5 bg-white/95 text-slate-700 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
                                   <GraduationCap className="w-3 h-3 text-slate-500" />
                                   {item.fieldOfStudy}
                                 </span>
                               )}
                               {item.degreeLevel && (
-                                <span className="bg-white/90 text-slate-600 border border-slate-200/80 px-2 py-0.5 rounded-md">
+                                <span className="bg-white/95 text-slate-600 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
                                   {item.degreeLevel}
+                                </span>
+                              )}
+                              {item.academicTerm && (
+                                <span className="bg-white/95 text-slate-500 border border-slate-200/80 px-2.5 py-1 rounded-xl font-medium shadow-2xs">
+                                  {item.academicTerm}
                                 </span>
                               )}
                             </div>
@@ -497,15 +518,15 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                       </div>
 
                       {/* Bottom Info & Action Buttons */}
-                      <div className="space-y-4 pt-4 border-t border-slate-100 mt-auto">
-                        <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                          <span>حجم: <strong>{item.fileSize || '۱ MB'}</strong></span>
+                      <div className="space-y-4 pt-4 border-t border-slate-100/90 mt-auto">
+                        <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                          <span>حجم: <strong className="text-slate-700">{item.fileSize || '۱ MB'}</strong></span>
                           {item.pageCount && (
-                            <span>تعداد: <strong>{item.pageCount}</strong></span>
+                            <span>تعداد صفحات: <strong className="text-slate-700">{item.pageCount}</strong></span>
                           )}
                           <span className="flex items-center gap-1">
-                            <Download className="w-3.5 h-3.5" />
-                            <strong>{item.downloadCount || 0}</strong> دریافت
+                            <Download className="w-3.5 h-3.5 text-slate-400" />
+                            <strong className="text-slate-700 font-mono">{item.downloadCount || 0}</strong> دریافت
                           </span>
                         </div>
 
@@ -513,21 +534,23 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                           <button
                             type="button"
                             onClick={() => setSelectedModalForm(item)}
-                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all border border-slate-200/80 shadow-2xs hover:border-slate-300"
                           >
-                            <Info className="w-4 h-4 text-slate-500" />
+                            <Info className="w-4 h-4 text-slate-400" />
                             {isPamphlet ? 'سرفصل‌ها و جزییات' : 'راهنما و مدارک'}
                           </button>
 
                           <button
                             type="button"
                             onClick={(e) => handleDownload(item, e)}
-                            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl text-xs font-bold shadow-md transition-all ${
+                            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl text-xs font-bold transition-all ${
                               isSuccess
-                                ? 'bg-emerald-600 text-white'
-                                : isPamphlet
-                                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20 hover:shadow-lg'
-                                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 hover:shadow-lg'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                                : isPinnedPamphlet
+                                  ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/25 hover:shadow-lg ring-1 ring-amber-300/40'
+                                  : isPamphlet
+                                    ? `${highlight?.buttonClass || 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20 hover:shadow-lg'}`
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 hover:shadow-lg'
                             }`}
                           >
                             {isSuccess ? (
@@ -538,7 +561,8 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                             ) : (
                               <>
                                 <Download className="w-4 h-4" />
-                                دانلود مستقیم
+                                <span>دانلود مستقیم</span>
+                                {isPinnedPamphlet && <Sparkles className="w-3 h-3 text-amber-100 mr-0.5" />}
                               </>
                             )}
                           </button>
@@ -585,13 +609,16 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                     {selectedModalForm.itemType === 'pamphlet' ? <BookOpen className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs font-black bg-white px-2 py-0.5 rounded border border-slate-200">
                         {selectedModalForm.code}
                       </span>
                       <span className="text-xs font-bold text-slate-500">
                         {selectedModalForm.category}
                       </span>
+                      {selectedModalForm.isPinned && selectedModalForm.itemType === 'pamphlet' && (
+                        <FeaturedPamphletBadge isPinned={true} />
+                      )}
                     </div>
                     <h2 className="text-lg font-black text-slate-900 mt-1">
                       {selectedModalForm.title}
