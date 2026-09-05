@@ -4,11 +4,9 @@ import { uploadFileToServer } from '../../lib/uploadHelper';
 import SidebarWidgetsEditor from '../../components/admin/SidebarWidgetsEditor';
 import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 import { 
-  PamphletCoverVisual, 
-  PamphletFramePicker, 
-  PAMPHLET_FRAME_STYLES, 
-  PAMPHLET_COLOR_PRESETS, 
-  getPamphletColor 
+  PamphletHighlightPicker, 
+  getPamphletHighlight, 
+  PAMPHLET_HIGHLIGHT_PRESETS 
 } from '../../components/PamphletCover';
 import { 
   Plus, Edit2, Trash2, Search, Filter, Eye,
@@ -60,12 +58,9 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 const DEGREE_LEVELS = [
-  'کاردانی حرفه‌ای',
-  'کاردانی فنی',
-  'کارشناسی ناپیوسته',
-  'کارشناسی پیوسته',
-  'کارشناسی ارشد',
-  'تمامی مقاطع (عمومی)'
+  'کاردانی',
+  'کارشناسی',
+  'کاردانی و کارشناسی'
 ];
 
 const ACADEMIC_TERMS = [
@@ -111,8 +106,8 @@ export default function AdminForms() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCustomField, setIsCustomField] = useState(false);
 
-  // Active Tab inside Editor Modal: 'details' | 'frame' | 'file' | 'instructions' | 'preview'
-  const [editorTab, setEditorTab] = useState<'details' | 'frame' | 'file' | 'instructions' | 'preview'>('details');
+  // Active Tab inside Editor Modal: 'details' | 'file' | 'instructions' | 'preview'
+  const [editorTab, setEditorTab] = useState<'details' | 'file' | 'instructions' | 'preview'>('details');
 
   // Custom Category creation input
   const [customCategory, setCustomCategory] = useState('');
@@ -453,7 +448,7 @@ export default function AdminForms() {
       fieldOfStudy: type === 'pamphlet' ? 'مهندسی کامپیوتر' : '',
       professorName: '',
       academicTerm: 'نیمسال اول و دوم',
-      degreeLevel: 'تمامی مقاطع (عمومی)',
+      degreeLevel: 'کاردانی',
       pageCount: '',
       courseCode: ''
     });
@@ -573,7 +568,7 @@ export default function AdminForms() {
       isPublished: true,
       isPinned: false,
       priority: pamphletsList.length + 1,
-      tags: ['جزوه', 'منبع_درسی', 'دانشگاه'],
+      tags: [],
       instructions: [
         'مطالعه پیش از جلسات کلاسی جهت آمادگی در کارگاه‌ها',
         'پاسخگویی به تمرینات انتهای هر فصل'
@@ -583,7 +578,7 @@ export default function AdminForms() {
       fieldOfStudy: configuredStudyFields[0]?.name || 'مهندسی فناوری اطلاعات (IT)',
       professorName: '',
       academicTerm: 'نیمسال اول (مهر)',
-      degreeLevel: 'کارشناسی ناپیوسته',
+      degreeLevel: 'کاردانی',
       pageCount: '',
       courseCode: 'CS-101',
       frameStyle: 'isometric-3d',
@@ -1801,19 +1796,22 @@ export default function AdminForms() {
                                   <span className="font-bold text-slate-800 text-sm hover:text-indigo-600 cursor-pointer" onClick={() => handleOpenEdit(item)}>
                                     {item.title}
                                   </span>
-                                  {item.frameStyle && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold">
-                                      <Palette className="w-2.5 h-2.5" />
-                                      قاب {PAMPHLET_FRAME_STYLES.find(s => s.id === item.frameStyle)?.name || 'سه‌بعدی'}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-1 max-w-md">
-                                  {item.description}
-                                </p>
-                              </div>
+                              {(() => {
+                                const rowHighlight = getPamphletHighlight(item.frameColor, item.fieldOfStudy);
+                                return (
+                                  <span className={`inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-md ${rowHighlight.badgeBg} ${rowHighlight.badgeText} border ${rowHighlight.badgeBorder} font-bold`}>
+                                    <span className={`w-2 h-2 rounded-full ${rowHighlight.dotClass}`} />
+                                    {rowHighlight.name.split(' (')[0].replace('هایلایت ', '')}
+                                  </span>
+                                );
+                              })()}
                             </div>
-                          </td>
+                            <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-1 max-w-md">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
 
                           <td className="p-4">
                             <div className="flex items-center gap-1.5 text-slate-700 font-bold">
@@ -1916,12 +1914,13 @@ export default function AdminForms() {
               {filteredItems.map(item => {
                 const formatBadge = getFormatBadge(item.fileFormat);
                 const isSelected = selectedIds.includes(item.id);
+                const highlight = getPamphletHighlight(item.frameColor, item.fieldOfStudy);
 
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white rounded-3xl p-6 border transition-all duration-200 flex flex-col justify-between relative group ${
-                      isSelected ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' : 'border-slate-200/80 shadow-sm hover:shadow-md'
+                    className={`${highlight.cardBg} ${highlight.topBarClass} rounded-3xl p-6 border transition-all duration-200 flex flex-col justify-between relative group ${
+                      isSelected ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' : `${highlight.cardBorder} ${highlight.hoverBorder} shadow-sm hover:shadow-md`
                     }`}
                   >
                     <div className="space-y-3.5">
@@ -1970,19 +1969,11 @@ export default function AdminForms() {
                           {item.title}
                         </h3>
                         {item.professorName && (
-                          <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-bold mt-1.5">
-                            <User className="w-3.5 h-3.5 text-indigo-500" />
+                          <div className={`flex items-center gap-1.5 text-xs ${highlight.teacherText} font-bold mt-1.5`}>
+                            <User className="w-3.5 h-3.5" />
                             <span>مدرس: {item.professorName}</span>
                           </div>
                         )}
-                      </div>
-
-                      {/* Visual Cover Mini Preview */}
-                      <div 
-                        onClick={() => handleOpenEdit(item)}
-                        className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center justify-center cursor-pointer hover:bg-indigo-50/40 transition-colors"
-                      >
-                        <PamphletCoverVisual item={item} size="sm" />
                       </div>
 
                       <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 font-light">
@@ -1991,18 +1982,18 @@ export default function AdminForms() {
 
                       <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
                         {item.fieldOfStudy && (
-                          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                          <span className="bg-white/80 text-slate-700 border border-slate-200/70 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
                             <GraduationCap className="w-3 h-3 text-slate-500" />
                             {item.fieldOfStudy}
                           </span>
                         )}
                         {item.degreeLevel && (
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                          <span className="bg-white/80 text-slate-600 border border-slate-200/70 px-2 py-0.5 rounded-md">
                             {item.degreeLevel}
                           </span>
                         )}
                         {item.pageCount && (
-                          <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">
+                          <span className={`${highlight.badgeBg} ${highlight.badgeText} border ${highlight.badgeBorder} px-2 py-0.5 rounded-md font-bold`}>
                             {item.pageCount}
                           </span>
                         )}
@@ -2543,7 +2534,7 @@ export default function AdminForms() {
             </div>
 
             {/* Modal Sub-Tabs */}
-            <div className={`grid ${formData.itemType === 'pamphlet' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setEditorTab('details')}
@@ -2556,21 +2547,6 @@ export default function AdminForms() {
                 <FileCheck className="w-4 h-4 shrink-0" />
                 <span className="truncate">{formData.itemType === 'pamphlet' ? 'مشخصات درس و جزوه' : 'مشخصات اصلی فرم'}</span>
               </button>
-
-              {formData.itemType === 'pamphlet' && (
-                <button
-                  type="button"
-                  onClick={() => setEditorTab('frame')}
-                  className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
-                    editorTab === 'frame'
-                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25'
-                      : 'bg-white text-indigo-700 hover:text-indigo-900 border border-indigo-200/70 hover:bg-indigo-50/50'
-                  }`}
-                >
-                  <Palette className="w-4 h-4 shrink-0 text-amber-500" />
-                  <span className="truncate">طرح قاب و رنگ جلد ⭐</span>
-                </button>
-              )}
 
               <button
                 type="button"
@@ -2608,7 +2584,7 @@ export default function AdminForms() {
                 }`}
               >
                 <Eye className="w-4 h-4 shrink-0" />
-                <span className="truncate">پیش‌نمایش</span>
+                <span className="truncate">پیش‌نمایش کارت</span>
               </button>
             </div>
 
@@ -2801,20 +2777,6 @@ export default function AdminForms() {
                             />
                           </div>
                         </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-2">گروه آموزشی / دسته‌بندی</label>
-                          <select
-                            name="category"
-                            value={formData.category}
-                            onChange={handleInputChange}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            {allCategories.map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                          </select>
-                        </div>
                       </>
                     ) : (
                       /* FORM SPECIFIC FIELDS */
@@ -2877,23 +2839,25 @@ export default function AdminForms() {
                       </>
                     )}
 
-                    {/* Add Custom Category Option */}
-                    <div className="p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                      <input
-                        type="text"
-                        value={customCategory}
-                        onChange={(e) => setCustomCategory(e.target.value)}
-                        placeholder="افزودن دسته‌بندی موضوعی جدید..."
-                        className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomCategory}
-                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shrink-0"
-                      >
-                        ثبت دسته جدید
-                      </button>
-                    </div>
+                    {/* Add Custom Category Option - Only for Forms */}
+                    {formData.itemType !== 'pamphlet' && (
+                      <div className="p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                        <input
+                          type="text"
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                          placeholder="افزودن دسته‌بندی موضوعی جدید..."
+                          className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomCategory}
+                          className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shrink-0"
+                        >
+                          ثبت دسته جدید
+                        </button>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-2">
@@ -2911,59 +2875,59 @@ export default function AdminForms() {
                       />
                     </div>
 
-                    {/* Tags */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">برچسب‌ها و کلمات کلیدی</label>
-                      <div className="flex flex-col sm:flex-row gap-2 mb-2">
-                        <input
-                          type="text"
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-                          placeholder="مثلاً: ثبت‌نام، کاردانی، ساختمان_داده..."
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddTag()}
-                          className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors shrink-0"
-                        >
-                          افزودن تگ
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {formData.tags?.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold"
+                    {/* Tags - Only for Forms */}
+                    {formData.itemType !== 'pamphlet' && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-2">برچسب‌ها و کلمات کلیدی</label>
+                        <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+                            placeholder="مثلاً: ثبت‌نام، کاردانی، فرم..."
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddTag()}
+                            className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors shrink-0"
                           >
-                            #{tag}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTag(tag)}
-                              className="text-blue-400 hover:text-red-500 mr-1"
+                            افزودن تگ
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          {formData.tags?.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold"
                             >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </span>
-                        ))}
+                              #{tag}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTag(tag)}
+                                className="text-blue-400 hover:text-red-500 mr-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                  </div>
-                )}
+                    {/* Pamphlet Color Highlight Picker */}
+                    {formData.itemType === 'pamphlet' && (
+                      <div className="pt-4 border-t border-slate-100">
+                        <PamphletHighlightPicker
+                          selectedColor={formData.frameColor}
+                          fieldOfStudy={formData.fieldOfStudy}
+                          onColorChange={(color) => setFormData(prev => ({ ...prev, frameColor: color }))}
+                        />
+                      </div>
+                    )}
 
-                {/* TAB: PAMPHLET FRAME & COLOR PICKER */}
-                {editorTab === 'frame' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <PamphletFramePicker
-                      selectedStyle={formData.frameStyle}
-                      selectedColor={formData.frameColor}
-                      onStyleChange={(style) => setFormData(prev => ({ ...prev, frameStyle: style as any }))}
-                      onColorChange={(color) => setFormData(prev => ({ ...prev, frameColor: color }))}
-                      formData={formData}
-                    />
                   </div>
                 )}
 
@@ -3230,58 +3194,79 @@ export default function AdminForms() {
                 )}
 
                 {/* TAB 4: LIVE PREVIEW */}
-                {editorTab === 'preview' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <p className="text-xs text-slate-400">پیش‌نمایش ظاهر نهایی این کارت برای دانشجویان:</p>
+                {editorTab === 'preview' && (() => {
+                  const previewHighlight = getPamphletHighlight(formData.frameColor, formData.fieldOfStudy);
+                  return (
+                    <div className="space-y-6 animate-in fade-in duration-200">
+                      <p className="text-xs text-slate-400">پیش‌نمایش ظاهر نهایی این کارت برای دانشجویان:</p>
+                      
+                      <div className={`${formData.itemType === 'pamphlet' ? `${previewHighlight.cardBg} ${previewHighlight.cardBorder} ${previewHighlight.topBarClass}` : 'bg-white border-slate-200'} rounded-3xl p-6 border shadow-md max-w-md mx-auto space-y-4`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-black px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+                              {formData.code || (formData.itemType === 'pamphlet' ? 'BOK-101' : 'FORM-101')}
+                            </span>
+                            {formData.isPinned && (
+                              <span className="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 shadow-sm">
+                                <Sparkles className="w-3 h-3" />
+                                {formData.itemType === 'pamphlet' ? 'منتخب ترم' : 'ویژه'}
+                              </span>
+                            )}
+                            {formData.itemType === 'pamphlet' && (
+                              <span className={`${previewHighlight.badgeBg} ${previewHighlight.badgeText} border ${previewHighlight.badgeBorder} px-2 py-0.5 rounded text-[10px] font-bold`}>
+                                جزوه درسی
+                              </span>
+                            )}
+                          </div>
 
-                    {formData.itemType === 'pamphlet' && (
-                      <div className="flex flex-col items-center justify-center p-6 bg-slate-50/80 rounded-3xl border border-slate-200/80">
-                        <PamphletCoverVisual item={formData} size="lg" />
-                        <span className="text-[11px] font-bold text-slate-500 mt-4">
-                          سبک قاب انتخابی: {PAMPHLET_FRAME_STYLES.find(s => s.id === (formData.frameStyle || 'isometric-3d'))?.name} | رنگ: {PAMPHLET_COLOR_PRESETS.find(c => c.id === (formData.frameColor || 'indigo'))?.name}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md max-w-md mx-auto space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-black px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
-                            {formData.code || 'BOK-101'}
+                          <span className="text-xs font-black px-2.5 py-0.5 rounded-md border bg-slate-100 text-slate-700 border-slate-200">
+                            {formData.fileFormat}
                           </span>
-                          {formData.isPinned && (
-                            <span className="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 shadow-sm">
-                              <Sparkles className="w-3 h-3" />
-                              ویژه
+                        </div>
+
+                        <div>
+                          <h3 className="text-base font-black text-slate-900 leading-snug">
+                            {formData.title || 'عنوان نمونه'}
+                          </h3>
+                          {formData.professorName && (
+                            <p className={`text-xs font-bold ${previewHighlight.teacherText} mt-1 flex items-center gap-1`}>
+                              <User className="w-3.5 h-3.5" />
+                              <span>مدرس: {formData.professorName}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        <p className="text-slate-500 text-xs leading-relaxed font-light line-clamp-3">
+                          {formData.description || 'توضیحات و جزئیات مربوطه در این قسمت برای دانشجو نمایش داده می‌شود.'}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                          {formData.fieldOfStudy && (
+                            <span className="bg-white/90 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                              <GraduationCap className="w-3 h-3 text-slate-500" />
+                              {formData.fieldOfStudy}
+                            </span>
+                          )}
+                          {formData.degreeLevel && (
+                            <span className="bg-white/90 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
+                              {formData.degreeLevel}
+                            </span>
+                          )}
+                          {formData.pageCount && (
+                            <span className={`${previewHighlight.badgeBg} ${previewHighlight.badgeText} border ${previewHighlight.badgeBorder} px-2 py-0.5 rounded-md font-bold`}>
+                              {formData.pageCount}
                             </span>
                           )}
                         </div>
 
-                        <span className="text-xs font-black px-2.5 py-0.5 rounded-md border bg-rose-50 text-rose-700 border-rose-200">
-                          {formData.fileFormat}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-base font-black text-slate-900 leading-snug">
-                          {formData.title || 'عنوان نمونه'}
-                        </h3>
-                        {formData.professorName && (
-                          <p className="text-xs font-bold text-indigo-600 mt-1">مدرس: {formData.professorName}</p>
-                        )}
-                      </div>
-
-                      <p className="text-slate-500 text-xs leading-relaxed font-light line-clamp-3">
-                        {formData.description || 'توضیحات و جزئیات مربوطه در این قسمت برای دانشجو نمایش داده می‌شود.'}
-                      </p>
-
-                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                        <span>حجم: <strong>{formData.fileSize || '۱ MB'}</strong></span>
-                        <span>وضعیت: <strong>{formData.isPublished ? 'منتشر شده' : 'پیش‌نویس'}</strong></span>
+                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                          <span>حجم: <strong>{formData.fileSize || '۱ MB'}</strong></span>
+                          <span>وضعیت: <strong>{formData.isPublished ? 'منتشر شده' : 'پیش‌نویس'}</strong></span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
               </div>
 

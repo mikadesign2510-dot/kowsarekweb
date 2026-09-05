@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { storage, FormItem } from '../lib/storage';
 import DynamicSidebar from '../components/DynamicSidebar';
-import { PamphletCoverVisual } from '../components/PamphletCover';
+import { getPamphletHighlight } from '../components/PamphletCover';
 import { 
   FileText, Download, Search, Filter, CheckCircle2, 
   HelpCircle, AlertCircle, Info, ExternalLink, ArrowLeft, 
   Calendar, Layers, Sparkles, Building2, Tag, FileCheck,
   FileType, FileSpreadsheet, Archive, Check, Eye, X, BookOpen,
-  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User, Palette
+  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User
 } from 'lucide-react';
 
 export default function FormsPage() {
@@ -415,6 +415,7 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                   const FormatIcon = formatInfo.icon;
                   const isSuccess = downloadSuccessId === item.id;
                   const isPamphlet = item.itemType === 'pamphlet';
+                  const highlight = isPamphlet ? getPamphletHighlight(item.frameColor, item.fieldOfStudy) : null;
 
                   return (
                     <motion.div
@@ -422,11 +423,11 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.04 }}
-                      className={`bg-white rounded-3xl p-6 border shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group relative ${
-                        isPamphlet 
-                          ? 'border-slate-200/90 hover:border-indigo-300' 
-                          : 'border-slate-200/90 hover:border-blue-300'
-                      }`}
+                      className={`${
+                        isPamphlet && highlight 
+                          ? `${highlight.cardBg} ${highlight.cardBorder} ${highlight.topBarClass} ${highlight.hoverBorder}` 
+                          : 'bg-white border-slate-200/90 hover:border-blue-300'
+                      } rounded-3xl p-6 border shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group relative`}
                     >
                       {/* Top Badges & Code */}
                       <div>
@@ -441,8 +442,8 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                                 {isPamphlet ? 'منتخب ترم' : 'ضروری و ویژه'}
                               </span>
                             )}
-                            {isPamphlet && (
-                              <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                            {isPamphlet && highlight && (
+                              <span className={`${highlight.badgeBg} ${highlight.badgeText} border ${highlight.badgeBorder} px-2 py-0.5 rounded text-[10px] font-bold`}>
                                 جزوه درسی
                               </span>
                             )}
@@ -464,31 +465,23 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                         {isPamphlet ? (
                           <div className="space-y-1.5 mb-3">
                             {item.professorName && (
-                              <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-bold">
-                                <User className="w-3.5 h-3.5 shrink-0 text-indigo-500" />
+                              <div className={`flex items-center gap-1.5 text-xs ${highlight?.teacherText || 'text-indigo-700'} font-bold`}>
+                                <User className="w-3.5 h-3.5 shrink-0" />
                                 <span>مدرس: {item.professorName}</span>
                               </div>
                             )}
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                               {item.fieldOfStudy && (
-                                <span className="flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                                <span className="flex items-center gap-1 bg-white/90 text-slate-700 border border-slate-200/80 px-2 py-0.5 rounded-md font-medium">
                                   <GraduationCap className="w-3 h-3 text-slate-500" />
                                   {item.fieldOfStudy}
                                 </span>
                               )}
                               {item.degreeLevel && (
-                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                <span className="bg-white/90 text-slate-600 border border-slate-200/80 px-2 py-0.5 rounded-md">
                                   {item.degreeLevel}
                                 </span>
                               )}
-                            </div>
-
-                            {/* Cover visual representation */}
-                            <div 
-                              onClick={() => setSelectedModalForm(item)}
-                              className="pt-2 pb-1 flex justify-center cursor-pointer hover:opacity-95 transition-opacity"
-                            >
-                              <PamphletCoverVisual item={item} size="sm" />
                             </div>
                           </div>
                         ) : (
@@ -616,52 +609,48 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
 
               {/* Modal Body */}
               <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                {/* Pamphlet Cover Visual Banner */}
-                {selectedModalForm.itemType === 'pamphlet' && (
-                  <div className="flex flex-col items-center justify-center p-6 bg-slate-50/70 rounded-3xl border border-slate-100">
-                    <PamphletCoverVisual item={selectedModalForm} size="lg" />
-                  </div>
-                )}
-
                 {/* Pamphlet Details */}
-                {selectedModalForm.itemType === 'pamphlet' && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs">
-                    {selectedModalForm.professorName && (
+                {selectedModalForm.itemType === 'pamphlet' && (() => {
+                  const modalHighlight = getPamphletHighlight(selectedModalForm.frameColor, selectedModalForm.fieldOfStudy);
+                  return (
+                    <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 p-4.5 ${modalHighlight.badgeBg} rounded-2xl border ${modalHighlight.badgeBorder} text-xs`}>
+                      {selectedModalForm.professorName && (
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">استاد / مدرس:</span>
+                          <strong className={`font-bold ${modalHighlight.teacherText}`}>{selectedModalForm.professorName}</strong>
+                        </div>
+                      )}
+                      {selectedModalForm.fieldOfStudy && (
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">رشته تحصیلی:</span>
+                          <strong className="text-slate-800 font-bold">{selectedModalForm.fieldOfStudy}</strong>
+                        </div>
+                      )}
+                      {selectedModalForm.degreeLevel && (
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">مقطع:</span>
+                          <strong className="text-slate-800 font-bold">{selectedModalForm.degreeLevel}</strong>
+                        </div>
+                      )}
+                      {selectedModalForm.academicTerm && (
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">نیمسال:</span>
+                          <strong className="text-slate-800 font-bold">{selectedModalForm.academicTerm}</strong>
+                        </div>
+                      )}
+                      {selectedModalForm.pageCount && (
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">تعداد صفحات:</span>
+                          <strong className="text-slate-800 font-bold">{selectedModalForm.pageCount}</strong>
+                        </div>
+                      )}
                       <div>
-                        <span className="text-slate-400 block text-[10px]">استاد / مدرس:</span>
-                        <strong className="text-slate-800 font-bold">{selectedModalForm.professorName}</strong>
+                        <span className="text-slate-500 block text-[10px]">فرمت فایل:</span>
+                        <strong className="text-slate-800 font-bold">{selectedModalForm.fileFormat} ({selectedModalForm.fileSize})</strong>
                       </div>
-                    )}
-                    {selectedModalForm.fieldOfStudy && (
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">رشته تحصیلی:</span>
-                        <strong className="text-slate-800 font-bold">{selectedModalForm.fieldOfStudy}</strong>
-                      </div>
-                    )}
-                    {selectedModalForm.degreeLevel && (
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">مقطع:</span>
-                        <strong className="text-slate-800 font-bold">{selectedModalForm.degreeLevel}</strong>
-                      </div>
-                    )}
-                    {selectedModalForm.academicTerm && (
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">نیمسال:</span>
-                        <strong className="text-slate-800 font-bold">{selectedModalForm.academicTerm}</strong>
-                      </div>
-                    )}
-                    {selectedModalForm.pageCount && (
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">تعداد صفحات:</span>
-                        <strong className="text-slate-800 font-bold">{selectedModalForm.pageCount}</strong>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">فرمت فایل:</span>
-                      <strong className="text-slate-800 font-bold">{selectedModalForm.fileFormat} ({selectedModalForm.fileSize})</strong>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div>
                   <h4 className="text-xs font-black text-slate-800 mb-2">توضیحات و اهداف:</h4>
