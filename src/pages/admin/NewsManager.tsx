@@ -1567,21 +1567,21 @@ export default function AdminNews() {
 
       {/* COMPREHENSIVE NEWS EDITOR MODAL */}
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
               <div>
-                <h2 className="text-xl font-black text-slate-800">
+                <h2 className="text-lg sm:text-xl font-black text-slate-800">
                   {editingId ? 'ویرایش و بازبینی خبر' : 'ثبت و نگارش خبر جدید'}
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">اطلاعات، رسانه‌ها، فایل‌ها و برچسب‌های خبر را تنظیم کنید</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">اطلاعات، رسانه‌ها، فایل‌ها و برچسب‌های خبر را تنظیم کنید</p>
               </div>
 
               <button
                 onClick={() => setIsEditorOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-2xl transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-2xl transition-colors shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1644,7 +1644,7 @@ export default function AdminNews() {
 
             {/* Modal Body / Scrollable Form */}
             <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 admin-modal-body">
                 
                 {/* TAB 1: CONTENT & BASIC INFO */}
                 {editorTab === 'content' && (
@@ -1745,7 +1745,7 @@ export default function AdminNews() {
                         onChange={handleInputChange}
                         rows={3}
                         placeholder="متن جذاب و کوتاهی که در صفحه اصلی و شبکه‌های اجتماعی نمایش داده می‌شود..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 

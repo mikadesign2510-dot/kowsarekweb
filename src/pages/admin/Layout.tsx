@@ -250,7 +250,7 @@ export default function AdminLayout() {
     { defaultName: 'معرفی مرکز (3D)', path: '/admin/presentation', icon: Layers, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_presentation' },
     { defaultName: 'مدیریت بنر و اسلایدر', path: '/admin/banners', icon: Images, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_banners' },
     { defaultName: 'نگارخانه (گالری)', path: '/admin/gallery', icon: Images, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_gallery' },
-    { defaultName: 'مدیریت جزوه و فرم‌ها', path: '/admin/forms', icon: FileText, roles: ['super_admin', 'education_expert', 'cultural_expert'], permissionKey: 'manage_forms' },
+    { defaultName: 'مدیریت جزوه و فرم‌ها', path: '/admin/forms', icon: FileText, roles: ['super_admin', 'education_expert', 'cultural_expert', 'custom_expert'], permissionKey: 'manage_forms' },
     { defaultName: 'مدیریت تماس با ما', path: '/admin/contact', icon: PhoneCall, roles: ['super_admin', 'education_expert', 'cultural_expert', 'custom_expert'], permissionKey: 'manage_contact', badge: unreadContactMessagesCount > 0 ? unreadContactMessagesCount : undefined },
     { defaultName: 'تنظیمات متون سایت', path: '/admin/settings', icon: Settings, roles: ['super_admin'], permissionKey: 'manage_settings' },
     { defaultName: 'مدیریت کارشناسان', path: '/admin/users', icon: UserCog, roles: ['super_admin'], permissionKey: 'manage_users' },

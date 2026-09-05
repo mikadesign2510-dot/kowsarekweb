@@ -460,60 +460,78 @@ export default function AdminForms() {
       professorName: formData.professorName?.trim() || 'استاد مربوطه'
     };
 
+    const isPamphlet = formData.itemType === 'pamphlet';
+
     if (editingId) {
       const existing = forms.find(f => f.id === editingId);
-      if (existing) {
-        storage.updateForm({
-          ...existing,
-          ...itemToSave,
-          id: editingId,
-          updatedAt: new Date().toLocaleDateString('fa-IR')
-        });
+      const fullUpdatedItem: FormItem = {
+        ...(existing || {}),
+        ...itemToSave,
+        id: editingId,
+        updatedAt: new Date().toLocaleDateString('fa-IR')
+      } as FormItem;
+      setForms(prev => prev.map(f => f.id === editingId ? fullUpdatedItem : f));
+      setIsEditorOpen(false);
+      setEditingId(null);
+      setSaveSuccessMessage(isPamphlet ? 'جزوه درسی با موفقیت ویرایش و ذخیره گردید.' : 'فرم با موفقیت ویرایش و ذخیره گردید.');
+      setTimeout(() => setSaveSuccessMessage(null), 4000);
+
+      try {
+        await storage.updateFormInDB(fullUpdatedItem);
+      } catch (err) {
+        console.warn('DB update form error:', err);
       }
     } else {
-      storage.addForm(itemToSave);
-    }
-    const updated = storage.getForms();
-    setForms(updated);
-    setIsEditorOpen(false);
-    setEditingId(null);
-    setSaveSuccessMessage(formData.itemType === 'pamphlet' ? 'جزوه درسی با موفقیت ثبت و منتشر گردید.' : 'فرم با موفقیت ثبت و ذخیره گردید.');
-    setTimeout(() => setSaveSuccessMessage(null), 4000);
+      setIsEditorOpen(false);
+      setEditingId(null);
+      setSaveSuccessMessage(isPamphlet ? 'جزوه درسی جدید با موفقیت ثبت و منتشر گردید.' : 'فرم جدید با موفقیت ثبت و منتشر گردید.');
+      setTimeout(() => setSaveSuccessMessage(null), 4000);
 
-    try {
-      await storage.saveFormsToDB(updated);
-    } catch (err) {
-      console.warn('DB sync forms error:', err);
+      try {
+        const savedItem = await storage.createFormInDB(itemToSave);
+        setForms(prev => [savedItem, ...prev.filter(f => f.id !== savedItem.id)]);
+      } catch (err) {
+        console.warn('DB create form error:', err);
+        const fallbackItem = storage.addForm(itemToSave);
+        setForms(prev => [fallbackItem, ...prev.filter(f => f.id !== fallbackItem.id)]);
+      }
     }
   };
 
   const confirmDeleteSingleForm = async () => {
     if (!formToDelete) return;
     const id = formToDelete.id;
-    storage.deleteForm(id);
-    const updated = storage.getForms();
-    setForms(updated);
+    const isPamphlet = formToDelete.itemType === 'pamphlet';
+
+    setForms(prev => prev.filter(item => item !== id));
     setSelectedIds(prev => prev.filter(item => item !== id));
     setFormToDelete(null);
 
+    setSaveSuccessMessage(isPamphlet ? 'جزوه آموزشی با موفقیت حذف گردید.' : 'فرم با موفقیت حذف گردید.');
+    setTimeout(() => setSaveSuccessMessage(null), 4000);
+
     try {
-      await storage.saveFormsToDB(updated);
+      await storage.deleteFormFromDB(id);
     } catch (err) {
-      console.warn('DB sync forms error:', err);
+      console.warn('DB delete single form error:', err);
     }
   };
 
   const confirmBulkDeleteForms = async () => {
-    selectedIds.forEach(id => storage.deleteForm(id));
-    const updated = storage.getForms();
-    setForms(updated);
+    const idsToDelete = [...selectedIds];
+    setForms(prev => prev.filter(item => !idsToDelete.includes(item.id)));
     setSelectedIds([]);
     setShowBulkDeleteConfirm(false);
 
-    try {
-      await storage.saveFormsToDB(updated);
-    } catch (err) {
-      console.warn('DB sync forms error:', err);
+    setSaveSuccessMessage(`${idsToDelete.length} مورد با موفقیت حذف شدند.`);
+    setTimeout(() => setSaveSuccessMessage(null), 4000);
+
+    for (const id of idsToDelete) {
+      try {
+        await storage.deleteFormFromDB(id);
+      } catch (err) {
+        console.warn('DB bulk delete item error:', err);
+      }
     }
   };
 
@@ -1809,25 +1827,25 @@ export default function AdminForms() {
 
       {/* CREATE / EDIT MODAL */}
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
           <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                   formData.itemType === 'pamphlet' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {formData.itemType === 'pamphlet' ? <BookOpen className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                  {formData.itemType === 'pamphlet' ? <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" /> : <FileText className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-slate-900">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900">
                     {editingId 
                       ? (formData.itemType === 'pamphlet' ? 'ویرایش جزوه و منبع درسی' : 'ویرایش فرم و مدرک اداری')
                       : (formData.itemType === 'pamphlet' ? 'افزودن جزوه و درسنامه جدید' : 'افزودن فرم و کاربرگ جدید')
                     }
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                     {formData.itemType === 'pamphlet' 
                       ? 'مشخصات درس، نام استاد، رشته، مقطع تحصیلی و بارگذاری فایل جزوه'
                       : 'اطلاعات کامل فرم، دسته‌بندی، مراحل تکمیل و بارگذاری فایل'}
@@ -1838,9 +1856,9 @@ export default function AdminForms() {
               <button
                 type="button"
                 onClick={() => setIsEditorOpen(false)}
-                className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
@@ -1901,7 +1919,7 @@ export default function AdminForms() {
 
             {/* Modal Body Form with noValidate to prevent URL error bugs */}
             <form onSubmit={handleSave} noValidate className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 admin-modal-body">
                 {formError && (
                   <div className="p-4 bg-red-50 text-red-700 text-xs font-bold rounded-2xl border border-red-200 flex items-center justify-between animate-in fade-in">
                     <div className="flex items-center gap-2">
@@ -2132,18 +2150,18 @@ export default function AdminForms() {
                     )}
 
                     {/* Add Custom Category Option */}
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-3">
+                    <div className="p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                       <input
                         type="text"
                         value={customCategory}
                         onChange={(e) => setCustomCategory(e.target.value)}
                         placeholder="افزودن دسته‌بندی موضوعی جدید..."
-                        className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button
                         type="button"
                         onClick={handleAddCustomCategory}
-                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors"
+                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shrink-0"
                       >
                         ثبت دسته جدید
                       </button>
@@ -2162,26 +2180,26 @@ export default function AdminForms() {
                         placeholder={formData.itemType === 'pamphlet' 
                           ? 'خلاصه مباحث تدریس شده، اهمیت درس و راهنمای استفاده از جزوه...' 
                           : 'توضیح دهید این فرم ویژه چه دانشجویانی است و چه کاربردی دارد...'}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 
                     {/* Tags */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-2">برچسب‌ها و کلمات کلیدی</label>
-                      <div className="flex gap-2 mb-2">
+                      <div className="flex flex-col sm:flex-row gap-2 mb-2">
                         <input
                           type="text"
                           value={tagInput}
                           onChange={(e) => setTagInput(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
                           placeholder="مثلاً: ثبت‌نام، کاردانی، ساختمان_داده..."
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button
                           type="button"
                           onClick={() => handleAddTag()}
-                          className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors"
+                          className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-2xl transition-colors shrink-0"
                         >
                           افزودن تگ
                         </button>

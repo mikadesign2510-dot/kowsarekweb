@@ -1966,20 +1966,163 @@ export const storage = {
       updatedAt: new Date().toLocaleDateString('fa-IR')
     };
     storage.saveForms([newForm, ...forms]);
+
+    // Asynchronously call API
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch('/api/forms', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newForm)
+      }).catch(err => console.warn('addForm API error:', err));
+    } catch {}
+
+    return newForm;
+  },
+
+  createFormInDB: async (formData: Partial<FormItem>): Promise<FormItem> => {
+    const tempId = formData.id || `form-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const newForm: FormItem = {
+      id: tempId,
+      code: formData.code || (formData.itemType === 'pamphlet' ? `BOK-${Math.floor(100 + Math.random() * 900)}` : `FORM-${Math.floor(100 + Math.random() * 900)}`),
+      title: formData.title || '',
+      description: formData.description || '',
+      category: formData.category || (formData.itemType === 'pamphlet' ? 'جزوات دروس عمومی و معارف' : 'عمومی'),
+      department: formData.department || (formData.itemType === 'pamphlet' ? 'گروه کامپیوتر و فناوری اطلاعات' : 'آموزش'),
+      fileFormat: formData.fileFormat || 'PDF',
+      fileSize: formData.fileSize || '۱.۵ مگابایت',
+      fileUrl: formData.fileUrl || '',
+      downloadCount: formData.downloadCount || 0,
+      isPublished: formData.isPublished !== false,
+      isPinned: Boolean(formData.isPinned),
+      priority: formData.priority || 1,
+      createdAt: formData.createdAt || new Date().toLocaleDateString('fa-IR'),
+      updatedAt: new Date().toLocaleDateString('fa-IR'),
+      tags: formData.tags || [],
+      instructions: formData.instructions || [],
+      requiredAttachments: formData.requiredAttachments || [],
+      itemType: formData.itemType || 'form',
+      professorName: formData.professorName || '',
+      fieldOfStudy: formData.fieldOfStudy || '',
+      degreeLevel: formData.degreeLevel || '',
+      academicTerm: formData.academicTerm || '',
+      pageCount: formData.pageCount || '',
+      courseCode: formData.courseCode || ''
+    };
+
+    // Save locally
+    const current = storage.getForms().filter(f => f.id !== newForm.id);
+    storage.saveForms([newForm, ...current]);
+
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch('/api/forms', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newForm)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const item = json.data;
+          const parsedItem: FormItem = {
+            id: item.id,
+            code: item.code,
+            title: item.title,
+            description: item.description,
+            category: item.category,
+            department: item.department,
+            fileFormat: item.file_format || item.fileFormat,
+            fileSize: item.file_size || item.fileSize,
+            fileUrl: item.file_url || item.fileUrl,
+            downloadCount: item.download_count || 0,
+            isPublished: item.is_published !== false,
+            isPinned: Boolean(item.is_pinned),
+            priority: item.priority || 1,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (Array.isArray(item.tags) ? item.tags : []),
+            instructions: typeof item.instructions === 'string' ? JSON.parse(item.instructions) : (Array.isArray(item.instructions) ? item.instructions : []),
+            requiredAttachments: typeof item.required_attachments === 'string' ? JSON.parse(item.required_attachments) : (Array.isArray(item.required_attachments) ? item.required_attachments : []),
+            itemType: item.item_type || (item.category?.includes('جزوه') ? 'pamphlet' : 'form'),
+            professorName: item.professor_name || '',
+            fieldOfStudy: item.field_of_study || '',
+            degreeLevel: item.degree_level || '',
+            academicTerm: item.academic_term || '',
+            pageCount: item.page_count || '',
+            courseCode: item.course_code || ''
+          };
+          const updatedList = storage.getForms().map(f => f.id === tempId ? parsedItem : f);
+          storage.saveForms(updatedList);
+          return parsedItem;
+        }
+      }
+    } catch (e) {
+      console.warn('Error in createFormInDB API call:', e);
+    }
     return newForm;
   },
 
   updateForm: (form: FormItem) => {
     const forms = storage.getForms();
-    storage.saveForms(forms.map(f => f.id === form.id ? { ...form, updatedAt: new Date().toLocaleDateString('fa-IR') } : f));
+    const updated = forms.map(f => f.id === form.id ? { ...form, updatedAt: new Date().toLocaleDateString('fa-IR') } : f);
+    storage.saveForms(updated);
+
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch(`/api/forms/${form.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(form)
+      }).catch(err => console.warn('updateForm API error:', err));
+    } catch {}
+  },
+
+  updateFormInDB: async (form: FormItem): Promise<boolean> => {
+    storage.updateForm(form);
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch(`/api/forms/${form.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(form)
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
   deleteForm: (id: string) => {
-    // API call injected by AI
-    const token = localStorage.getItem('kowsar_admin_token') || localStorage.getItem('kowsar_token');
-    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-    fetch(`/api/forms/${id}`, { method: 'DELETE', headers }).catch(e => console.error('Delete API error:', e));
-    storage.saveForms(storage.getForms().filter(f => f.id !== id));
+    const forms = storage.getForms().filter(f => f.id !== id);
+    storage.saveForms(forms);
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch(`/api/forms/${id}`, { method: 'DELETE', headers }).catch(e => console.error('Delete API error:', e));
+    } catch {}
+  },
+
+  deleteFormFromDB: async (id: string): Promise<boolean> => {
+    const forms = storage.getForms().filter(f => f.id !== id);
+    storage.saveForms(forms);
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch(`/api/forms/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (!res.ok) {
+        // Fallback to sync if individual delete fails
+        await storage.saveFormsToDB(forms);
+      }
+      return true;
+    } catch (e) {
+      console.warn('deleteFormFromDB error:', e);
+      try {
+        await storage.saveFormsToDB(forms);
+      } catch {}
+      return false;
+    }
   },
 
   toggleFormPublish: (id: string) => {
@@ -2514,34 +2657,56 @@ export const storage = {
       const res = await fetch('/api/forms');
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const dbForms: FormItem[] = json.data.map((item: any) => ({
-            id: item.id,
-            code: item.code,
-            title: item.title,
-            description: item.description,
-            category: item.category,
-            department: item.department,
-            fileFormat: item.file_format,
-            fileSize: item.file_size,
-            fileUrl: item.file_url,
-            downloadCount: item.download_count,
-            isPublished: item.is_published,
-            isPinned: item.is_pinned,
-            priority: item.priority,
-            createdAt: item.created_at,
-            updatedAt: item.updated_at,
-            tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags || [],
-            instructions: typeof item.instructions === 'string' ? JSON.parse(item.instructions) : item.instructions || [],
-            requiredAttachments: typeof item.required_attachments === 'string' ? JSON.parse(item.required_attachments) : item.required_attachments || [],
-            itemType: item.item_type || (item.category?.includes('جزوه') ? 'pamphlet' : 'form'),
-            professorName: item.professor_name || '',
-            fieldOfStudy: item.field_of_study || '',
-            degreeLevel: item.degree_level || '',
-            academicTerm: item.academic_term || '',
-            pageCount: item.page_count || '',
-            courseCode: item.course_code || ''
-          }));
+        if (json.success && Array.isArray(json.data)) {
+          if (json.data.length === 0) {
+            // Seed DB if empty
+            await storage.saveFormsToDB(defaultForms);
+            return defaultForms;
+          }
+
+          const dbForms: FormItem[] = json.data.map((item: any) => {
+            const parseSafe = (val: any) => {
+              if (Array.isArray(val)) return val;
+              if (typeof val === 'string') {
+                try {
+                  const p = JSON.parse(val);
+                  return Array.isArray(p) ? p : [];
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            return {
+              id: item.id,
+              code: item.code || 'FORM-100',
+              title: item.title,
+              description: item.description || '',
+              category: item.category || 'عمومی',
+              department: item.department || 'آموزش',
+              fileFormat: item.file_format || 'PDF',
+              fileSize: item.file_size || '۱.۵ مگابایت',
+              fileUrl: item.file_url || '',
+              downloadCount: Number(item.download_count || 0),
+              isPublished: item.is_published !== false,
+              isPinned: Boolean(item.is_pinned),
+              priority: Number(item.priority || 1),
+              createdAt: item.created_at || new Date().toLocaleDateString('fa-IR'),
+              updatedAt: item.updated_at || new Date().toLocaleDateString('fa-IR'),
+              tags: parseSafe(item.tags),
+              instructions: parseSafe(item.instructions),
+              requiredAttachments: parseSafe(item.required_attachments),
+              itemType: item.item_type || (item.category?.includes('جزوه') ? 'pamphlet' : 'form'),
+              professorName: item.professor_name || '',
+              fieldOfStudy: item.field_of_study || '',
+              degreeLevel: item.degree_level || '',
+              academicTerm: item.academic_term || '',
+              pageCount: item.page_count || '',
+              courseCode: item.course_code || ''
+            };
+          });
+
           localStorage.setItem(FORMS_KEY, JSON.stringify(dbForms));
           return dbForms;
         }

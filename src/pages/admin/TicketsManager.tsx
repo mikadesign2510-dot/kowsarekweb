@@ -180,17 +180,17 @@ export default function AdminTicketsManager() {
               </div>
 
               {activeTicket.status !== 'closed' ? (
-                <div className="p-4 border-t border-slate-100 bg-white">
-                  <form onSubmit={handleReply} className="flex gap-2">
+                <div className="p-3 sm:p-4 border-t border-slate-100 bg-white">
+                  <form onSubmit={handleReply} className="flex flex-col sm:flex-row gap-2.5">
                     <textarea
                       required
                       value={replyMessage}
                       onChange={e => setReplyMessage(e.target.value)}
                       placeholder="پاسخ خود را بنویسید..."
-                      className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 resize-none h-14"
+                      className="w-full flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 focus:outline-none focus:border-blue-500 min-h-[70px] sm:min-h-[56px] text-sm leading-relaxed"
                     />
-                    <button type="submit" className="bg-blue-600 text-white px-6 rounded-xl hover:bg-blue-700 transition-colors shrink-0 flex items-center justify-center font-bold">
-                      <Send className="w-5 h-5 ml-2" />
+                    <button type="submit" className="bg-blue-600 text-white py-3 sm:py-0 px-5 rounded-xl hover:bg-blue-700 transition-colors shrink-0 flex items-center justify-center font-bold text-sm">
+                      <Send className="w-4 h-4 ml-2" />
                       ارسال پاسخ
                     </button>
                   </form>

@@ -118,20 +118,20 @@ export async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS forms (
         id VARCHAR(64) PRIMARY KEY,
-        code VARCHAR(50) NOT NULL,
+        code VARCHAR(50),
         title VARCHAR(255) NOT NULL,
         description TEXT,
-        category VARCHAR(100) NOT NULL,
-        department VARCHAR(100) NOT NULL,
-        file_format VARCHAR(20) NOT NULL,
-        file_size VARCHAR(50) NOT NULL,
-        file_url TEXT NOT NULL,
+        category VARCHAR(100),
+        department VARCHAR(100),
+        file_format VARCHAR(20),
+        file_size VARCHAR(50),
+        file_url TEXT,
         download_count INT DEFAULT 0,
         is_published BOOLEAN DEFAULT TRUE,
         is_pinned BOOLEAN DEFAULT FALSE,
         priority INT DEFAULT 1,
-        created_at VARCHAR(50) NOT NULL,
-        updated_at VARCHAR(50) NOT NULL,
+        created_at VARCHAR(50),
+        updated_at VARCHAR(50),
         tags JSONB DEFAULT '[]'::jsonb,
         instructions JSONB DEFAULT '[]'::jsonb,
         required_attachments JSONB DEFAULT '[]'::jsonb,
@@ -150,6 +150,14 @@ export async function initializeDatabase() {
       ALTER TABLE forms ADD COLUMN IF NOT EXISTS academic_term VARCHAR(100);
       ALTER TABLE forms ADD COLUMN IF NOT EXISTS page_count VARCHAR(50);
       ALTER TABLE forms ADD COLUMN IF NOT EXISTS course_code VARCHAR(50);
+      ALTER TABLE forms ALTER COLUMN file_url DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN file_format DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN file_size DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN department DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN category DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN code DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN created_at DROP NOT NULL;
+      ALTER TABLE forms ALTER COLUMN updated_at DROP NOT NULL;
     `);
 
     // ۶. جدول تنظیمات کلی سایت

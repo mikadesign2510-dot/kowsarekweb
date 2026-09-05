@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     name: string;
+    permissions?: string[] | string;
   };
 }
 
@@ -24,7 +25,8 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
           id: 'admin_1',
           email: String(adminEmail),
           name: 'مدیر سامانه',
-          role: 'super_admin'
+          role: 'super_admin',
+          permissions: ['*']
         };
         return next();
       }
@@ -48,6 +50,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
       email: string;
       role: string;
       name: string;
+      permissions?: string[] | string;
     };
 
     req.user = decoded;
@@ -58,7 +61,8 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
         id: 'admin_1',
         email: String(req.headers['x-admin-email']),
         name: 'مدیر سامانه',
-        role: 'super_admin'
+        role: 'super_admin',
+        permissions: ['*']
       };
       return next();
     }
@@ -81,5 +85,37 @@ export function requireRole(allowedRoles: string[]) {
       return res.status(403).json({ success: false, message: 'شما دسترسی لازم برای انجام این عملیات را ندارید.' });
     }
     next();
+  };
+}
+
+export function requirePermission(permissionKey: string, allowedRoles: string[] = ['super_admin', 'education_expert', 'cultural_expert']) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'احراز هویت انجام نشده است.' });
+    }
+    if (req.user.role === 'super_admin') {
+      return next();
+    }
+
+    let perms: string[] = [];
+    if (Array.isArray(req.user.permissions)) {
+      perms = req.user.permissions;
+    } else if (typeof req.user.permissions === 'string') {
+      try {
+        perms = JSON.parse(req.user.permissions);
+      } catch {
+        perms = [];
+      }
+    }
+
+    if (perms.includes('*') || perms.includes(permissionKey)) {
+      return next();
+    }
+
+    if (allowedRoles.includes(req.user.role)) {
+      return next();
+    }
+
+    return res.status(403).json({ success: false, message: 'شما دسترسی لازم برای این بخش را ندارید.' });
   };
 }

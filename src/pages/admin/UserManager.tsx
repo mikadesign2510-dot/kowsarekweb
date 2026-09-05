@@ -46,7 +46,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'manage_presentation', label: 'معرفی مرکز (3D)' },
   { id: 'manage_banners', label: 'مدیریت بنر و تصاویر' },
   { id: 'manage_gallery', label: 'نگارخانه (گالری)' },
-  { id: 'manage_forms', label: 'مدیریت فرم‌ها و آیین‌نامه‌ها' },
+  { id: 'manage_forms', label: 'مدیریت جزوه و فرم‌ها' },
   { id: 'manage_contact', label: 'مدیریت پیام‌های تماس با ما' },
   { id: 'manage_settings', label: 'تنظیمات متون سایت' },
   { id: 'manage_users', label: 'مدیریت کارشناسان' },
