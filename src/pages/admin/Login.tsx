@@ -62,19 +62,10 @@ export default function AdminLogin() {
       });
     }, 1000);
 
-    // Fetch IP for audit log
-    const fetchIP = async () => {
-      try {
-        if (!localStorage.getItem('kowsar_user_ip')) {
-          const res = await fetch('https://api.ipify.org?format=json');
-          const data = await res.json();
-          localStorage.setItem('kowsar_user_ip', data.ip);
-        }
-      } catch (err) {
-        console.warn('Could not fetch IP for audit logs', err);
-      }
-    };
-    fetchIP();
+    // Set internal IP / client identification without slow external API calls
+    if (!localStorage.getItem('kowsar_user_ip')) {
+      localStorage.setItem('kowsar_user_ip', '127.0.0.1');
+    }
 
     return () => clearInterval(timer);
   }, []);
@@ -107,41 +98,43 @@ export default function AdminLogin() {
         }),
       });
 
-      const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
 
-      if (response.ok && data.success) {
-        // Reset failed attempts on success
-        localStorage.removeItem('kowsar_login_failed_attempts');
-        localStorage.removeItem('kowsar_login_lockout_until');
+        if (data.success) {
+          // Reset failed attempts on success
+          localStorage.removeItem('kowsar_login_failed_attempts');
+          localStorage.removeItem('kowsar_login_lockout_until');
 
-        if (data.token) {
-          localStorage.setItem('kowsar_jwt_token', data.token);
-        }
-
-        const loggedInUser = data.user || { name: 'مدیر سامانه', email, role: 'super_admin' };
-        if (loggedInUser.permissions && typeof loggedInUser.permissions === 'string') {
-          try { loggedInUser.permissions = JSON.parse(loggedInUser.permissions); } catch {}
-        }
-        if (!loggedInUser.permissions || loggedInUser.permissions.length === 0) {
-          const localUserMatch = storage.getUsers().find(u => 
-            (u.email || '').toLowerCase() === email.toLowerCase() || 
-            (u.email || '').split('@')[0] === email.split('@')[0]
-          );
-          if (localUserMatch) {
-            loggedInUser.permissions = localUserMatch.permissions;
-            loggedInUser.role = localUserMatch.role || loggedInUser.role;
+          if (data.token) {
+            localStorage.setItem('kowsar_jwt_token', data.token);
           }
-        }
 
-        localStorage.setItem(
-          'kowsar_admin_auth',
-          JSON.stringify(loggedInUser)
-        );
-        navigate('/admin');
-        return;
+          const loggedInUser = data.user || { name: 'مدیر سامانه', email, role: 'super_admin' };
+          if (loggedInUser.permissions && typeof loggedInUser.permissions === 'string') {
+            try { loggedInUser.permissions = JSON.parse(loggedInUser.permissions); } catch {}
+          }
+          if (!loggedInUser.permissions || loggedInUser.permissions.length === 0) {
+            const localUserMatch = storage.getUsers().find(u => 
+              (u.email || '').toLowerCase() === email.toLowerCase() || 
+              (u.email || '').split('@')[0] === email.split('@')[0]
+            );
+            if (localUserMatch) {
+              loggedInUser.permissions = localUserMatch.permissions;
+              loggedInUser.role = localUserMatch.role || loggedInUser.role;
+            }
+          }
+
+          localStorage.setItem(
+            'kowsar_admin_auth',
+            JSON.stringify(loggedInUser)
+          );
+          navigate('/admin');
+          return;
+        }
       }
     } catch (apiError) {
-      console.warn('API login request failed, checking local storage:', apiError);
+      console.warn('API login request failed, checking local storage fallback:', apiError);
     }
 
     // ۳. بررسی حالت پشتیبان محلی (Offline Fallback)

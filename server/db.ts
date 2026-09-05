@@ -269,10 +269,10 @@ export async function initializeDatabase() {
           category: 'مراسم‌ها',
           description: 'نمایشگاه دستاوردهای علمی و پژوهشی دانشجویان مرکز کوثر کاکی.',
           date: '۱۴۰۳/۰۸/۱۵',
-          cover_image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=1000',
+          cover_image: 'https://picsum.photos/seed/7606/1200/800',
           images: JSON.stringify([
-            { id: 'img-1', url: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=1600', type: 'image', title: 'افتتاحیه نمایشگاه' },
-            { id: 'img-2', url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1600', type: 'image', title: 'غرفه فناوری و کامپیوتر' }
+            { id: 'img-1', url: 'https://picsum.photos/seed/7612/1200/800', type: 'image', title: 'افتتاحیه نمایشگاه' },
+            { id: 'img-2', url: 'https://picsum.photos/seed/7737/1200/800', type: 'image', title: 'غرفه فناوری و کامپیوتر' }
           ]),
           is_active: true
         }
@@ -305,7 +305,7 @@ export async function initializeDatabase() {
           frame_badge_text: 'دانشگاه علمی کاربردی کوثر',
           theme: 'primary',
           is_visible: true,
-          image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200'
+          image: 'https://picsum.photos/seed/7733/1200/800'
         },
         {
           id: 'intro-2',
@@ -319,7 +319,7 @@ export async function initializeDatabase() {
           frame_badge_text: 'مهارت و اشتغال پایدار',
           theme: 'light',
           is_visible: true,
-          image: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=1200'
+          image: 'https://picsum.photos/seed/7587/1200/800'
         }
       ];
 
@@ -383,7 +383,7 @@ export async function initializeDatabase() {
         {
           title: 'آغاز ثبت‌نام دوره‌های کاردانی و کارشناسی ترم جدید',
           date: '۱۵ مهر ۱۴۰۳',
-          image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=800',
+          image: 'https://picsum.photos/seed/7569/1200/800',
           summary: 'ثبت‌نام بدون کنکور در رشته‌های متنوع مهارتی و کاربردی آغاز شد.',
           content: 'با حمد و سپاس به درگاه خداوند متعال، به اطلاع تمامی علاقه‌مندان به تحصیل در مقاطع کاردانی و کارشناسی می‌رساند که ثبت‌نام ترم جدید مرکز آموزش علمی کاربردی کوثر کاکی آغاز شده است.',
           category: 'آموزشی',
@@ -394,7 +394,7 @@ export async function initializeDatabase() {
         {
           title: 'برگزاری همایش کارآفرینی و مهارت‌آموزی',
           date: '۱۰ آبان ۱۴۰۳',
-          image: 'https://images.unsplash.com/photo-1540317580384-e5d43867caa6?auto=format&fit=crop&q=80&w=800',
+          image: 'https://picsum.photos/seed/7625/1200/800',
           summary: 'این همایش با حضور اساتید برجسته و کارآفرینان موفق منطقه در سالن آمفی‌تئاتر مرکز برگزار خواهد شد.',
           content: 'در راستای تحقق اهداف دانشگاه جامع علمی کاربردی مبنی بر تربیت نیروی متخصص و کارآفرین، همایش بزرگ «کارآفرینی و مهارت‌آموزی در عصر دیجیتال» در مرکز کوثر کاکی برگزار می‌شود.',
           category: 'رویدادها',
@@ -405,7 +405,7 @@ export async function initializeDatabase() {
         {
           title: 'افتتاح آزمایشگاه جدید شبکه‌های کامپیوتری',
           date: '۲۲ آبان ۱۴۰۳',
-          image: 'https://images.unsplash.com/photo-1562813733-b31f71025d54?auto=format&fit=crop&q=80&w=800',
+          image: 'https://picsum.photos/seed/7362/1200/800',
           summary: 'در راستای ارتقای کیفیت آموزشی، آزمایشگاه مجهز شبکه‌های کامپیوتری با حضور ریاست دانشگاه افتتاح گردید.',
           content: 'امروز طی مراسمی باشکوه و با حضور ریاست محترم دانشگاه، فرماندار شهرستان و جمعی از مسئولین محلی، آزمایشگاه تخصصی شبکه‌های کامپیوتری و امنیت اطلاعات در مرکز آموزش علمی کاربردی کوثر کاکی به بهره‌برداری رسید.',
           category: 'امکانات',
@@ -431,7 +431,7 @@ export async function initializeDatabase() {
       const seedBanners = [
         {
           id: '1',
-          image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=2000',
+          image_url: 'https://picsum.photos/seed/7605/1200/800',
           title: 'محیط پویای یادگیری و مهارت‌آموزی',
           subtitle: 'دانشگاه جامع علمی کاربردی مرکز کوثر کاکی',
           link: '/register',
@@ -442,7 +442,7 @@ export async function initializeDatabase() {
         },
         {
           id: '2',
-          image_url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=2000',
+          image_url: 'https://picsum.photos/seed/7732/1200/800',
           title: 'پیشگام در مهارت‌های شغلی و آینده‌ساز',
           subtitle: 'پذیرش دانشجو در مقاطع کاردانی و کارشناسی بدون کنکور',
           link: '/register',
@@ -453,7 +453,7 @@ export async function initializeDatabase() {
         },
         {
           id: '3',
-          image_url: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=2000',
+          image_url: 'https://picsum.photos/seed/7282/1200/800',
           title: 'کارگاه‌های مجهز و اساتید مجرب',
           subtitle: 'تضمین مهارت‌آموزی تخصصی و ورود مقتدر به بازار کار',
           link: '/#about',
