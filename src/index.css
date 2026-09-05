@@ -284,6 +284,7 @@ body {
 
 @media (max-width: 640px) {
   /* Prevent iOS automatic zooming on focus while keeping Persian font readable */
+  input:not([type="checkbox"]):not([type="radio"]),
   input[type="text"],
   input[type="email"],
   input[type="password"],

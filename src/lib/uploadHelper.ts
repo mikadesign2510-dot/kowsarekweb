@@ -97,11 +97,21 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
   formData.append('folder', folder);
 
   try {
-    const token = localStorage.getItem('kowsar_jwt_token');
+    const token = localStorage.getItem('kowsar_jwt_token') || localStorage.getItem('kowsar_admin_token');
+    const authData = localStorage.getItem('kowsar_admin_auth');
+    let email = 'admin@kowsar.ac.ir';
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        if (parsed.email) email = parsed.email;
+      } catch {}
+    }
+
     const response = await fetch(`/api/upload?folder=${encodeURIComponent(folder)}`, {
       method: 'POST',
       headers: {
         'x-upload-folder': folder,
+        'x-admin-email': email,
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: formData
@@ -115,14 +125,25 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
         filename: data.data.filename,
         sizeFormatted: data.data.sizeFormatted || `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} مگابایت`,
         originalSizeFormatted: `${originalSizeMB} مگابایت`,
-        message: data.message
+        message: data.message || 'فایل با موفقیت روی سرور ذخیره شد'
       };
     }
-    throw new Error(data.message || 'خطا در آپلود فایل روی سرور');
+    throw new Error(data.message || `خطا در آپلود فایل روی سرور (کد خطا: ${response.status})`);
   } catch (error: any) {
-    console.warn('Direct server upload fallback to DataURL:', error);
+    console.error('Direct server upload error:', error);
     
-    // در صورت بروز هرگونه خطای موقت، تبدیل به DataURL استاندارد برای جلوگیری از اختلال کار کاربر
+    // برای فایل‌های اسنادی و آموزشی و فایل‌های بزرگتر از ۱ مگابایت، هرگز DataURL نساز تا فضای مرورگر اشغال نشود
+    if (!originalFile.type.startsWith('image/') || originalFile.size > 1024 * 1024) {
+      return {
+        success: false,
+        url: '',
+        filename: originalFile.name,
+        sizeFormatted: `${originalSizeMB} مگابایت`,
+        message: error?.message || 'خطا در بارگذاری فایل روی سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.'
+      };
+    }
+
+    // تبدیل به DataURL فقط برای تصاویر بندانگشتی و آیکون‌های بسیار کوچک (کمتر از ۱ مگابایت)
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -132,7 +153,7 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
           filename: fileToUpload.name,
           sizeFormatted: `${(fileToUpload.size / (1024 * 1024)).toFixed(2)} مگابایت`,
           originalSizeFormatted: `${originalSizeMB} مگابایت`,
-          message: 'فایل با موفقیت در فضای ابری محلی پردازش شد'
+          message: 'تصویر به صورت محلی ذخیره گردید'
         });
       };
       reader.onerror = () => {

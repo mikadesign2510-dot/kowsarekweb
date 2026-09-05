@@ -28,9 +28,16 @@ export default function FormsPage() {
     const handleSettingsUpdate = () => {
       setSettings(storage.getSettings());
     };
+
+    const handleFormsChanged = () => {
+      loadForms();
+    };
+
     window.addEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
+    window.addEventListener('kowsar_forms_changed', handleFormsChanged);
     return () => {
       window.removeEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
+      window.removeEventListener('kowsar_forms_changed', handleFormsChanged);
     };
   }, []);
 

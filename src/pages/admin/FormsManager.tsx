@@ -13,7 +13,7 @@ import {
   CheckSquare, Square, Building2, FileCheck, FileType,
   Archive, Info, BookOpen, Clock, ArrowUpDown, ShieldCheck,
   RotateCcw, LayoutTemplate, GraduationCap, User, BookOpenCheck,
-  FileCode, CheckCircle2, Settings
+  FileCode, CheckCircle2, Settings, HardDrive, FolderCheck, FolderOpen, Copy
 } from 'lucide-react';
 
 const DEFAULT_FORM_CATEGORIES = [
@@ -68,7 +68,7 @@ const ACADEMIC_TERMS = [
 ];
 
 export default function AdminForms() {
-  const [activeTab, setActiveTab] = useState<'forms' | 'pamphlets' | 'sidebar' | 'settings'>('forms');
+  const [activeTab, setActiveTab] = useState<'forms' | 'pamphlets' | 'storage' | 'sidebar' | 'settings'>('pamphlets');
   const [forms, setForms] = useState<FormItem[]>([]);
 
   const [siteSettings, setSiteSettings] = useState<any>(storage.getSettings());
@@ -81,6 +81,17 @@ export default function AdminForms() {
   const [formToDelete, setFormToDelete] = useState<{ id: string; title: string; itemType?: string } | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showResetFormsConfirm, setShowResetFormsConfirm] = useState(false);
+
+  // Dedicated Server Storage state
+  const [serverFiles, setServerFiles] = useState<any[]>([]);
+  const [isLoadingServerFiles, setIsLoadingServerFiles] = useState(false);
+  const [serverFoldersStats, setServerFoldersStats] = useState<any[]>([]);
+  const [selectedServerFolder, setSelectedServerFolder] = useState<'all' | 'pamphlets' | 'forms'>('pamphlets');
+  const [serverFileSearch, setServerFileSearch] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [showServerFilePicker, setShowServerFilePicker] = useState(false);
+  const [isDirectUploading, setIsDirectUploading] = useState(false);
+  const directServerFileInputRef = useRef<HTMLInputElement>(null);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,6 +117,81 @@ export default function AdminForms() {
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to fetch server files from /api/upload/files
+  const fetchServerFiles = async (folder?: string) => {
+    setIsLoadingServerFiles(true);
+    try {
+      const targetFolder = folder !== undefined ? folder : (selectedServerFolder === 'all' ? '' : selectedServerFolder);
+      const url = targetFolder ? `/api/upload/files?folder=${encodeURIComponent(targetFolder)}` : '/api/upload/list';
+      const token = localStorage.getItem('kowsar_jwt_token') || localStorage.getItem('kowsar_admin_token');
+      const res = await fetch(url, {
+        headers: {
+          'x-admin-email': 'admin@kowsar.ac.ir',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setServerFiles(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch server files error:', e);
+    } finally {
+      setIsLoadingServerFiles(false);
+    }
+  };
+
+  // Helper to fetch folder storage stats
+  const fetchFoldersStats = async () => {
+    try {
+      const token = localStorage.getItem('kowsar_jwt_token') || localStorage.getItem('kowsar_admin_token');
+      const res = await fetch('/api/upload/folders', {
+        headers: {
+          'x-admin-email': 'admin@kowsar.ac.ir',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setServerFoldersStats(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch folder stats error:', e);
+    }
+  };
+
+  const handleDeleteServerFile = async (folder: string, filename: string) => {
+    if (!window.confirm(`آیا از حذف دائمی فایل ${filename} از سرور اطمینان دارید؟`)) return;
+    try {
+      const token = localStorage.getItem('kowsar_jwt_token') || localStorage.getItem('kowsar_admin_token');
+      const res = await fetch(`/api/upload/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-email': 'admin@kowsar.ac.ir',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        setServerFiles(prev => prev.filter(f => f.name !== filename));
+        fetchFoldersStats();
+        setSaveSuccessMessage('فایل با موفقیت از سرور حذف شد.');
+        setTimeout(() => setSaveSuccessMessage(null), 3000);
+      }
+    } catch (err: any) {
+      alert('خطا در حذف فایل از سرور: ' + (err?.message || ''));
+    }
+  };
+
+  const handleCopyServerUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2500);
+  };
 
   // Main Form Data State
   const [formData, setFormData] = useState<Omit<FormItem, 'id' | 'createdAt' | 'updatedAt' | 'downloadCount'>>({
@@ -146,6 +232,8 @@ export default function AdminForms() {
 
   useEffect(() => {
     loadData();
+    fetchFoldersStats();
+    fetchServerFiles();
     
     // Auto-migrate fw_links to higher_ed_systems
     let currentSettings = storage.getSettings();
@@ -164,6 +252,13 @@ export default function AdminForms() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'storage') {
+      fetchFoldersStats();
+      fetchServerFiles();
+    }
+  }, [activeTab, selectedServerFolder]);
 
   // Split lists: Admin Forms vs Pamphlets
   const adminFormsList = useMemo(() => {
@@ -253,12 +348,16 @@ export default function AdminForms() {
         const uploadFolder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
         const result = await uploadFileToServer(file, uploadFolder);
         if (result.success && result.url) {
+          const cleanName = file.name.substring(0, file.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim();
           setFormData(prev => ({
             ...prev,
+            title: prev.title.trim() ? prev.title : cleanName,
             fileUrl: result.url,
             fileSize: result.sizeFormatted,
             fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
           }));
+          fetchFoldersStats();
+          fetchServerFiles();
         } else {
           alert('خطا در بارگذاری فایل: ' + (result.message || 'نامشخص'));
         }
@@ -268,6 +367,59 @@ export default function AdminForms() {
         setIsUploading(false);
       }
     }
+  };
+
+  const handleDirectUploadToFolder = async (e: React.ChangeEvent<HTMLInputElement>, targetFolder: 'pamphlets' | 'forms') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsDirectUploading(true);
+    try {
+      const result = await uploadFileToServer(file, targetFolder);
+      if (result.success && result.url) {
+        setSaveSuccessMessage(`فایل "${file.name}" با موفقیت در پوشه /uploads/${targetFolder}/ سرور بارگذاری شد.`);
+        setTimeout(() => setSaveSuccessMessage(null), 4000);
+        fetchFoldersStats();
+        fetchServerFiles(targetFolder);
+      } else {
+        alert('خطا در بارگذاری مستقیم: ' + (result.message || 'نامشخص'));
+      }
+    } catch (err: any) {
+      alert('خطا در ارتباط با سرور: ' + (err?.message || ''));
+    } finally {
+      setIsDirectUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleCreateItemFromServerFile = (serverFile: any, type: 'pamphlet' | 'form') => {
+    const ext = serverFile.ext || 'PDF';
+    const cleanName = serverFile.name.substring(0, serverFile.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim() || serverFile.name;
+    setFormData({
+      code: type === 'pamphlet' ? `BOK-${Math.floor(100 + Math.random() * 900)}` : `EDU-${Math.floor(100 + Math.random() * 900)}`,
+      title: cleanName,
+      description: type === 'pamphlet' ? `جزوه آموزشی و درسنامه درس ${cleanName}` : `فرم و کاربرگ رسمی دانشگاه ${cleanName}`,
+      category: type === 'pamphlet' ? DEFAULT_PAMPHLET_CATEGORIES[0] : DEFAULT_FORM_CATEGORIES[0],
+      department: DEFAULT_DEPARTMENTS[0],
+      fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF',
+      fileSize: serverFile.sizeFormatted || '۱.۵ مگابایت',
+      fileUrl: serverFile.url,
+      isPublished: true,
+      isPinned: false,
+      priority: 1,
+      tags: type === 'pamphlet' ? ['جزوه_درسی', 'کوثر_کاکی'] : ['فرم_آموزشی', 'کوثر_کاکی'],
+      instructions: type === 'pamphlet' ? ['مطالعه دقیق سرفصل‌ها'] : ['تکمیل دقیق تمامی فیلدها'],
+      requiredAttachments: [],
+      itemType: type,
+      fieldOfStudy: type === 'pamphlet' ? 'مهندسی کامپیوتر' : '',
+      professorName: '',
+      academicTerm: 'نیمسال اول و دوم',
+      degreeLevel: 'تمامی مقاطع (عمومی)',
+      pageCount: '',
+      courseCode: ''
+    });
+    setEditingId(null);
+    setEditorTab('details');
+    setIsEditorOpen(true);
   };
 
   const handleAddTag = (e?: React.KeyboardEvent | React.MouseEvent) => {
@@ -461,6 +613,11 @@ export default function AdminForms() {
     };
 
     const isPamphlet = formData.itemType === 'pamphlet';
+    setActiveTab(isPamphlet ? 'pamphlets' : 'forms');
+    setCategoryFilter('all');
+    setStatusFilter('all');
+    setDegreeFilter('all');
+    setSearchQuery('');
 
     if (editingId) {
       const existing = forms.find(f => f.id === editingId);
@@ -478,6 +635,7 @@ export default function AdminForms() {
 
       try {
         await storage.updateFormInDB(fullUpdatedItem);
+        loadData();
       } catch (err) {
         console.warn('DB update form error:', err);
       }
@@ -490,6 +648,7 @@ export default function AdminForms() {
       try {
         const savedItem = await storage.createFormInDB(itemToSave);
         setForms(prev => [savedItem, ...prev.filter(f => f.id !== savedItem.id)]);
+        loadData();
       } catch (err) {
         console.warn('DB create form error:', err);
         const fallbackItem = storage.addForm(itemToSave);
@@ -722,6 +881,26 @@ export default function AdminForms() {
               افزودن
             </button>
           </div>
+        ) : activeTab === 'storage' ? (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { fetchFoldersStats(); fetchServerFiles(); }}
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-3.5 py-2.5 rounded-2xl shadow-sm text-xs transition-all"
+              title="بروزرسانی فایل‌های سرور"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-600 ${isLoadingServerFiles ? 'animate-spin' : ''}`} />
+              بروزرسانی لیست فایل‌ها
+            </button>
+            <a
+              href="/forms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-2xl shadow-sm text-xs transition-all"
+            >
+              <ExternalLink className="w-4 h-4 text-blue-600" />
+              مشاهده در سایت
+            </a>
+          </div>
         ) : (
           <div className="flex items-center gap-3">
             <a
@@ -770,6 +949,23 @@ export default function AdminForms() {
           <span>مدیریت جزوات درسی و منابع آموزشی</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === 'pamphlets' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
             {pamphletsList.length}
+          </span>
+        </button>
+
+        {/* Tab 3: Dedicated Server Storage */}
+        <button
+          type="button"
+          onClick={() => { setActiveTab('storage'); setSelectedIds([]); }}
+          className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'storage'
+              ? 'border-emerald-600 text-emerald-600 bg-emerald-50/50 rounded-t-2xl'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-2xl'
+          }`}
+        >
+          <FolderCheck className="w-4 h-4" />
+          <span>پوشه‌های اختصاصی سرور (/uploads)</span>
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+            نامحدود
           </span>
         </button>
 
@@ -1710,6 +1906,336 @@ export default function AdminForms() {
           )}
 
         </div>
+      ) : activeTab === 'storage' ? (
+        /* TAB: DEDICATED SERVER STORAGE & FILE ARCHIVE */
+        <div className="space-y-8 animate-in fade-in duration-200">
+          
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+            <div className="relative z-10 max-w-3xl space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>پوشه‌های اختصاصی روی دیسک سرور • بدون محدودیت حجم فایل</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                مرکز مدیریت فایل‌ها و پوشه‌های اختصاصی سرور
+              </h2>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                تمام فایل‌های جزوات درسی در مسیر اختصاصی <code className="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-300">/uploads/pamphlets/</code> و تمام فرم‌های اداری در مسیر <code className="bg-white/10 px-2 py-0.5 rounded font-mono text-teal-300">/uploads/forms/</code> با امنیت بالا و دسترسی عمومی مستقیم ذخیره می‌شوند.
+              </p>
+            </div>
+          </div>
+
+          {/* Dedicated Folders Showcase */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Folder 1: Pamphlets */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100">
+                    پوشه اختصاصی جزوات
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-black text-slate-900">پوشه جزوات درسی و منابع اساتید</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-slate-400">مسیر دیسک سرور:</span>
+                    <code className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold" dir="ltr">/uploads/pamphlets/</code>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 block font-medium">تعداد فایل‌ها:</span>
+                    <span className="font-black text-slate-800 text-sm">
+                      {serverFoldersStats.find(f => f.name === 'pamphlets')?.count ?? 0} فایل
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">حجم کل ذخیره شده:</span>
+                    <span className="font-black text-slate-800 text-sm">
+                      {serverFoldersStats.find(f => f.name === 'pamphlets')?.totalSizeFormatted ?? '۰ بایت'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-5 mt-4 border-t border-slate-100 flex items-center gap-3">
+                <label className="flex-1 cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleDirectUploadToFolder(e, 'pamphlets')}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.7z,.pptx,.ppt,.txt,.epub,.djvu"
+                  />
+                  <span className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm">
+                    <Upload className="w-4 h-4" />
+                    بارگذاری مستقیم جزوه
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedServerFolder('pamphlets');
+                    fetchServerFiles('pamphlets');
+                  }}
+                  className={`py-2.5 px-4 rounded-xl font-bold text-xs border transition-colors ${
+                    selectedServerFolder === 'pamphlets'
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  مشاهده فایل‌ها
+                </button>
+              </div>
+            </div>
+
+            {/* Folder 2: Forms */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <span className="px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-xs font-bold border border-teal-100">
+                    پوشه اختصاصی فرم‌ها
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-black text-slate-900">پوشه فرم‌ها و اسناد اداری دانشگاه</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-slate-400">مسیر دیسک سرور:</span>
+                    <code className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold" dir="ltr">/uploads/forms/</code>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 block font-medium">تعداد فایل‌ها:</span>
+                    <span className="font-black text-slate-800 text-sm">
+                      {serverFoldersStats.find(f => f.name === 'forms')?.count ?? 0} فایل
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">حجم کل ذخیره شده:</span>
+                    <span className="font-black text-slate-800 text-sm">
+                      {serverFoldersStats.find(f => f.name === 'forms')?.totalSizeFormatted ?? '۰ بایت'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-5 mt-4 border-t border-slate-100 flex items-center gap-3">
+                <label className="flex-1 cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleDirectUploadToFolder(e, 'forms')}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.7z,.pptx,.ppt,.txt,.epub,.djvu"
+                  />
+                  <span className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm">
+                    <Upload className="w-4 h-4" />
+                    بارگذاری مستقیم فرم
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedServerFolder('forms');
+                    fetchServerFiles('forms');
+                  }}
+                  className={`py-2.5 px-4 rounded-xl font-bold text-xs border transition-colors ${
+                    selectedServerFolder === 'forms'
+                      ? 'bg-teal-50 text-teal-700 border-teal-200'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  مشاهده فایل‌ها
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Files Explorer Table */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            {/* Explorer Toolbar */}
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedServerFolder('all'); fetchServerFiles(''); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedServerFolder === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  همه فایل‌ها ({serverFiles.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedServerFolder('pamphlets'); fetchServerFiles('pamphlets'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedServerFolder === 'pamphlets'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  فایل‌های جزوات (/uploads/pamphlets)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedServerFolder('forms'); fetchServerFiles('forms'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedServerFolder === 'forms'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  فایل‌های فرم‌ها (/uploads/forms)
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={serverFileSearch}
+                    onChange={(e) => setServerFileSearch(e.target.value)}
+                    placeholder="جستجوی نام فایل..."
+                    className="w-48 sm:w-64 pr-9 pl-4 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { fetchFoldersStats(); fetchServerFiles(); }}
+                  className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600"
+                  title="بروزرسانی"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingServerFiles ? 'animate-spin text-emerald-600' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Table / List */}
+            {isLoadingServerFiles ? (
+              <div className="p-16 text-center">
+                <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-3" />
+                <p className="text-xs font-bold text-slate-500">در حال دریافت لیست فایل‌های ذخیره شده در سرور...</p>
+              </div>
+            ) : serverFiles.length === 0 ? (
+              <div className="p-16 text-center space-y-3">
+                <div className="w-14 h-14 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <FolderOpen className="w-7 h-7" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-700">هیچ فایلی در این پوشه یافت نشد</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  می‌توانید با استفاده از دکمه‌های بارگذاری بالا، جزوات و فرم‌های خود را بدون محدودیت حجم فایل مستقیماً روی سرور ذخیره کنید.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-50/80 text-slate-400 font-bold border-b border-slate-100">
+                    <tr>
+                      <th className="p-4 pr-6">نام فایل در سرور</th>
+                      <th className="p-4">پوشه ذخیره‌سازی</th>
+                      <th className="p-4">حجم فایل</th>
+                      <th className="p-4">تاریخ بارگذاری</th>
+                      <th className="p-4 pl-6 text-center">عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {serverFiles
+                      .filter(f => !serverFileSearch || f.name.toLowerCase().includes(serverFileSearch.toLowerCase()))
+                      .map((file, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-4 pr-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px] shrink-0 uppercase">
+                                {file.ext || 'FILE'}
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className="font-bold text-slate-800 truncate max-w-xs sm:max-w-md" title={file.name}>
+                                  {file.name}
+                                </p>
+                                <span className="font-mono text-[10px] text-slate-400 block truncate" dir="ltr">
+                                  {file.url}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                              file.folder === 'pamphlets'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                : 'bg-teal-50 text-teal-700 border border-teal-100'
+                            }`}>
+                              /uploads/{file.folder}/
+                            </span>
+                          </td>
+                          <td className="p-4 font-bold text-slate-700">
+                            {file.sizeFormatted}
+                          </td>
+                          <td className="p-4 text-slate-400">
+                            {file.createdAt ? new Date(file.createdAt).toLocaleDateString('fa-IR') : '—'}
+                          </td>
+                          <td className="p-4 pl-6">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyServerUrl(file.url)}
+                                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                                title="کپی آدرس مستقیم سرور"
+                              >
+                                {copiedUrl === file.url ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                                title="مشاهده / دانلود فایل"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => handleCreateItemFromServerFile(file, file.folder === 'pamphlets' ? 'pamphlet' : 'form')}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition-colors flex items-center gap-1.5"
+                                title="ایجاد رکورد جدید در سایت با این فایل"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>{file.folder === 'pamphlets' ? 'ثبت جزوه جدید' : 'ثبت فرم جدید'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteServerFile(file.folder, file.name)}
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors"
+                                title="حذف از سرور"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        </div>
       ) : activeTab === 'sidebar' ? (
         /* Tab 3: Sidebar Widgets Management */
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
@@ -2273,13 +2799,13 @@ export default function AdminForms() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 pt-2">
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
                         <input
                           type="file"
                           ref={fileInputRef}
                           onChange={handleFileUpload}
                           className="hidden"
-                          accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.pptx,.ppt"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.7z,.pptx,.ppt,.txt,.epub,.djvu"
                         />
                         <button
                           type="button"
@@ -2295,12 +2821,27 @@ export default function AdminForms() {
                           ) : (
                             <>
                               <Upload className="w-4 h-4" />
-                              انتخاب و بارگذاری در سرور
+                              انتخاب و بارگذاری مستقیم در سرور
                             </>
                           )}
                         </button>
-                        <span className="text-xs text-slate-400">
-                          مسیر سرور: <code className="font-mono text-[11px] text-slate-600">/uploads/{formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms'}/</code>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const folder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
+                            setSelectedServerFolder(folder);
+                            fetchServerFiles(folder);
+                            setShowServerFilePicker(true);
+                          }}
+                          className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl transition-colors shadow-sm"
+                        >
+                          <FolderOpen className="w-4 h-4 text-emerald-600" />
+                          انتخاب از فایل‌های ذخیره‌شده در سرور
+                        </button>
+
+                        <span className="text-xs text-slate-400 w-full sm:w-auto">
+                          مسیر سرور: <code className="font-mono text-[11px] text-slate-600 font-bold" dir="ltr">/uploads/{formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms'}/</code> (نامحدود)
                         </span>
                       </div>
 
@@ -2570,6 +3111,112 @@ export default function AdminForms() {
         confirmText="بله، بازنشانی شود"
         icon={RotateCcw}
       />
+
+      {/* Server File Picker Modal */}
+      {showServerFilePicker && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">انتخاب از فایل‌های ذخیره‌شده در سرور</h3>
+                  <p className="text-[11px] text-slate-400">یکی از فایل‌های ذخیره شده در پوشه سرور را انتخاب کنید</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowServerFilePicker(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/60"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedServerFolder('pamphlets'); fetchServerFiles('pamphlets'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedServerFolder === 'pamphlets' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  پوشه جزوات (/uploads/pamphlets)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedServerFolder('forms'); fetchServerFiles('forms'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedServerFolder === 'forms' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  پوشه فرم‌ها (/uploads/forms)
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchServerFiles(selectedServerFolder === 'all' ? '' : selectedServerFolder)}
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingServerFiles ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 divide-y divide-slate-100">
+              {isLoadingServerFiles ? (
+                <div className="py-12 text-center">
+                  <RefreshCw className="w-6 h-6 animate-spin text-emerald-600 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400">در حال دریافت لیست فایل‌ها...</p>
+                </div>
+              ) : serverFiles.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400">
+                  فایلی در این پوشه یافت نشد. می‌توانید از بخش مدیریت پوشه‌ها فایل بارگذاری نمایید.
+                </div>
+              ) : (
+                serverFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        fileUrl: file.url,
+                        fileSize: file.sizeFormatted,
+                        fileFormat: (file.ext || 'PDF').toUpperCase(),
+                        title: prev.title.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, "")
+                      }));
+                      setShowServerFilePicker(false);
+                    }}
+                    className="py-3 px-3 hover:bg-emerald-50/60 rounded-2xl cursor-pointer transition-colors flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px] uppercase">
+                        {file.ext || 'FILE'}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-800 truncate group-hover:text-emerald-700" title={file.name}>
+                          {file.name}
+                        </p>
+                        <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{file.url}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-bold">
+                        {file.sizeFormatted}
+                      </span>
+                      <button className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                        انتخاب
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Notification Toast */}
       {saveSuccessMessage && (

@@ -1953,7 +1953,28 @@ export const storage = {
   },
 
   saveForms: (forms: FormItem[]) => {
-    localStorage.setItem(FORMS_KEY, JSON.stringify(forms));
+    try {
+      localStorage.setItem(FORMS_KEY, JSON.stringify(forms));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('kowsar_forms_changed'));
+      }
+    } catch (quotaErr) {
+      console.warn('localStorage saveForms quota exceeded, saving sanitized list:', quotaErr);
+      try {
+        const sanitized = forms.map(f => {
+          if (f.fileUrl && f.fileUrl.startsWith('data:') && f.fileUrl.length > 20000) {
+            return { ...f, fileUrl: '' };
+          }
+          return f;
+        });
+        localStorage.setItem(FORMS_KEY, JSON.stringify(sanitized));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('kowsar_forms_changed'));
+        }
+      } catch (inner) {
+        console.error('Failed to save forms locally:', inner);
+      }
+    }
   },
 
   addForm: (formData: Omit<FormItem, 'id' | 'createdAt' | 'updatedAt' | 'downloadCount'>): FormItem => {
@@ -2707,7 +2728,7 @@ export const storage = {
             };
           });
 
-          localStorage.setItem(FORMS_KEY, JSON.stringify(dbForms));
+          storage.saveForms(dbForms);
           return dbForms;
         }
       }

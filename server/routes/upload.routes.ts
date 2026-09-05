@@ -13,7 +13,20 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 // Pre-create known section subdirectories
-const DEFAULT_FOLDERS = ['banners', 'gallery', 'videos', 'news', 'forms', 'settings', 'portal', 'avatars', 'general'];
+// پوشه‌های اختصاصی جزوات، درسنامه‌ها و فرم‌های دانشگاهی در سرور
+const DEFAULT_FOLDERS = [
+  'pamphlets', // پوشه اختصاصی جزوات، درسنامه‌ها و کتب آموزشی دانشگاه
+  'forms',     // پوشه اختصاصی فرم‌ها و کاربرگ‌های اداری و مالی
+  'banners', 
+  'gallery', 
+  'videos', 
+  'news', 
+  'settings', 
+  'portal', 
+  'avatars', 
+  'general'
+];
+
 DEFAULT_FOLDERS.forEach(sub => {
   const p = path.join(UPLOADS_DIR, sub);
   if (!fs.existsSync(p)) {
@@ -32,11 +45,18 @@ const getTargetDir = (folderParam?: any) => {
   return { targetDir, safeFolder };
 };
 
-// Allowed extensions and mimetypes
+// Allowed extensions and mimetypes - شامل تمام پسوندهای اسناد، ارائه‌ها، جزوات و فشرده‌سازی
 const ALLOWED_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.jfif', '.bmp', '.tiff', '.tif', '.heic', '.heif', '.avif',
-  '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv',
-  '.zip', '.rar', '.txt', '.mp4', '.webm', '.ogg'
+  '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.pptx', '.ppt', '.txt', '.rtf',
+  '.zip', '.rar', '.7z', '.tar', '.gz', '.odt', '.ods', '.odp',
+  '.epub', '.djvu', '.mobi',
+  '.mp4', '.webm', '.ogg', '.mp3', '.wav'
+]);
+
+// پسوندهای بالقوه خطرناک اجرایی که نباید روی سرور آپلود شوند
+const BLOCKED_EXECUTABLES = new Set([
+  '.exe', '.bat', '.cmd', '.sh', '.msi', '.vbs', '.ps1', '.jar', '.com', '.scr', '.pif'
 ]);
 
 const storage = multer.diskStorage({
@@ -46,29 +66,53 @@ const storage = multer.diskStorage({
     cb(null, targetDir);
   },
   filename: (req, file, cb) => {
-    // Generate safe filename: timestamp-random-originalName
-    const ext = path.extname(file.originalname).toLowerCase();
-    const baseName = path.basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_')
-      .slice(0, 50);
+    // بازگردانی کاراکترهای فارسی در صورت انکود غیراستاندارد latin1 توسط مرورگر/busboy
+    let originalName = file.originalname;
+    try {
+      originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    } catch {}
+
+    const ext = path.extname(originalName).toLowerCase();
+    const rawBase = path.basename(originalName, ext);
+    // مجاز شمردن حروف فارسی، انگلیسی، اعداد و خط فاصله
+    const sanitizedBase = rawBase
+      .replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, '_')
+      .replace(/\s+/g, '_')
+      .slice(0, 60);
+
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e5)}`;
-    cb(null, `${uniqueSuffix}-${baseName}${ext || '.jpg'}`);
+    cb(null, `${uniqueSuffix}-${sanitizedBase || 'file'}${ext || '.pdf'}`);
   }
 });
 
+// بدون محدودیت حجم برای جزوات و فرم‌ها (حداکثر تا ۲ گیگابایت برای فایل‌های بسیار حجیم دانشگاهی)
 const upload = multer({
   storage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB server limit
+    fileSize: 2048 * 1024 * 1024, // ۲ گیگابایت (بدون محدودیت برای فایل‌های حجیم و کتاب‌ها)
+    fieldSize: 200 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    // If extension is missing but mimetype is an image/video, allow it
-    if (!ext && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'))) {
+    let originalName = file.originalname;
+    try {
+      originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    } catch {}
+
+    const ext = path.extname(originalName).toLowerCase();
+
+    // مسدودسازی فایل‌های اجرایی خطرناک
+    if (ext && BLOCKED_EXECUTABLES.has(ext)) {
+      return cb(new Error('بارگذاری فایل‌های اجرایی و اسکریپتی به دلایل امنیتی سرور مجاز نمی‌باشد.'));
+    }
+
+    const folder = String(req.query.folder || req.headers['x-upload-folder'] || (req as any).body?.folder || '').toLowerCase();
+    // برای پوشه‌های اختصاصی جزوات و فرم‌ها، تمامی فایل‌های غیر اجرایی مجاز هستند
+    if (folder === 'pamphlets' || folder === 'forms') {
       return cb(null, true);
     }
+
     if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
-      return cb(new Error(`فرمت فایل غیرمجاز است (${ext}). فرمت‌های مجاز: تصاویر، ویدیوها، اسناد PDF، Word، Excel و ZIP`));
+      return cb(new Error(`فرمت فایل غیرمجاز است (${ext}). لطفاً فایل‌های اسنادی نظیر PDF، Word، PowerPoint، Excel، یا آرشیو ZIP بارگذاری نمایید.`));
     }
     cb(null, true);
   }
@@ -169,34 +213,164 @@ router.post('/multiple', (req: Request, res: Response) => {
   });
 });
 
-// List uploaded files (for admin dashboard / storage monitoring)
+// List uploaded files (for admin dashboard / storage monitoring / dedicated folder browser)
 router.get('/list', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      return res.json({ success: true, data: [] });
+    const folderParam = req.query.folder ? String(req.query.folder).trim() : null;
+    
+    if (folderParam) {
+      const safeFolder = folderParam.replace(/[^a-z0-9_-]/gi, '') || 'general';
+      const targetDir = path.join(UPLOADS_DIR, safeFolder);
+      if (!fs.existsSync(targetDir)) {
+        return res.json({ success: true, count: 0, folder: safeFolder, data: [] });
+      }
+      const fileNames = fs.readdirSync(targetDir);
+      const files = fileNames.filter(name => !name.startsWith('.')).map(name => {
+        const filePath = path.join(targetDir, name);
+        const stat = fs.statSync(filePath);
+        const ext = path.extname(name).toLowerCase();
+        return {
+          name,
+          folder: safeFolder,
+          url: `/uploads/${safeFolder}/${name}`,
+          size: stat.size,
+          sizeFormatted: stat.size >= 1024 * 1024 
+            ? `${(stat.size / (1024 * 1024)).toFixed(2)} مگابایت` 
+            : `${(stat.size / 1024).toFixed(1)} کیلوبایت`,
+          createdAt: stat.birthtime,
+          ext
+        };
+      }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      return res.json({
+        success: true,
+        folder: safeFolder,
+        count: files.length,
+        data: files
+      });
     }
 
-    const fileNames = fs.readdirSync(UPLOADS_DIR);
-    const files = fileNames.map(name => {
-      const filePath = path.join(UPLOADS_DIR, name);
-      const stat = fs.statSync(filePath);
-      return {
-        name,
-        url: `/uploads/${name}`,
-        size: stat.size,
-        sizeFormatted: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
-        createdAt: stat.birthtime
-      };
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Default: scan all default folders (pamphlets, forms, etc.)
+    const allFiles: any[] = [];
+    DEFAULT_FOLDERS.forEach(folder => {
+      const folderDir = path.join(UPLOADS_DIR, folder);
+      if (fs.existsSync(folderDir)) {
+        const names = fs.readdirSync(folderDir);
+        names.forEach(name => {
+          if (name.startsWith('.')) return;
+          const filePath = path.join(folderDir, name);
+          try {
+            const stat = fs.statSync(filePath);
+            if (stat.isFile()) {
+              allFiles.push({
+                name,
+                folder,
+                url: `/uploads/${folder}/${name}`,
+                size: stat.size,
+                sizeFormatted: stat.size >= 1024 * 1024 
+                  ? `${(stat.size / (1024 * 1024)).toFixed(2)} مگابایت` 
+                  : `${(stat.size / 1024).toFixed(1)} کیلوبایت`,
+                createdAt: stat.birthtime,
+                ext: path.extname(name).toLowerCase()
+              });
+            }
+          } catch {}
+        });
+      }
+    });
+
+    allFiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     res.json({
       success: true,
-      count: files.length,
-      data: files
+      count: allFiles.length,
+      data: allFiles
     });
   } catch (error: any) {
     console.error('List uploads error:', error);
     res.status(500).json({ success: false, message: 'خطا در دریافت لیست فایل‌ها' });
+  }
+});
+
+// Endpoint to list files in dedicated folders (e.g. pamphlets or forms)
+router.get('/files', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const folder = String(req.query.folder || 'pamphlets').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const folderDir = path.join(UPLOADS_DIR, folder);
+    if (!fs.existsSync(folderDir)) {
+      fs.mkdirSync(folderDir, { recursive: true });
+    }
+
+    const fileNames = fs.readdirSync(folderDir).filter(f => !f.startsWith('.'));
+    const files = fileNames.map(name => {
+      const filePath = path.join(folderDir, name);
+      try {
+        const stat = fs.statSync(filePath);
+        return {
+          name,
+          folder,
+          url: `/uploads/${folder}/${name}`,
+          size: stat.size,
+          sizeFormatted: stat.size >= 1024 * 1024 
+            ? `${(stat.size / (1024 * 1024)).toFixed(2)} مگابایت` 
+            : `${(stat.size / 1024).toFixed(1)} کیلوبایت`,
+          createdAt: stat.birthtime,
+          ext: path.extname(name).toLowerCase()
+        };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({
+      success: true,
+      folder,
+      count: files.length,
+      data: files
+    });
+  } catch (error: any) {
+    console.error('Get folder files error:', error);
+    res.status(500).json({ success: false, message: 'خطا در واکشی فایل‌های پوشه' });
+  }
+});
+
+// Folders status summary endpoint
+router.get('/folders', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const foldersInfo = DEFAULT_FOLDERS.map(f => {
+      const dir = path.join(UPLOADS_DIR, f);
+      let count = 0;
+      let totalSize = 0;
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir);
+        files.forEach(file => {
+          try {
+            const stat = fs.statSync(path.join(dir, file));
+            if (stat.isFile()) {
+              count++;
+              totalSize += stat.size;
+            }
+          } catch {}
+        });
+      }
+      return {
+        id: f,
+        name: f === 'pamphlets' ? 'پوشه اختصاصی جزوات درسی' : (f === 'forms' ? 'پوشه اختصاصی فرم‌های اداری' : f),
+        count,
+        totalSize,
+        totalSizeFormatted: totalSize >= 1024 * 1024 
+          ? `${(totalSize / (1024 * 1024)).toFixed(2)} مگابایت` 
+          : `${(totalSize / 1024).toFixed(1)} کیلوبایت`
+      };
+    });
+
+    res.json({
+      success: true,
+      data: foldersInfo
+    });
+  } catch (error: any) {
+    console.error('Get folders error:', error);
+    res.status(500).json({ success: false, message: 'خطا در دریافت وضعیت پوشه‌ها' });
   }
 });
 

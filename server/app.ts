@@ -32,11 +32,15 @@ export const app: Express = express();
 // مخفی‌سازی ردپای نسخه اکسپرس
 app.disable('x-powered-by');
 
-// اطمینان از وجود پوشه uploads برای ذخیره‌سازی فایل‌های سرور
+// اطمینان از وجود پوشه uploads و پوشه‌های اختصاصی جزوات و فرم‌ها
 const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const pamphletsDir = path.join(uploadsDir, 'pamphlets');
+const formsDir = path.join(uploadsDir, 'forms');
+[uploadsDir, pamphletsDir, formsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 // پوشه public برای سرو فایل‌های robots.txt, sitemap.xml و favicon
 const publicDir = path.join(process.cwd(), 'public');
@@ -91,8 +95,9 @@ app.use(helmet({
   frameguard: false,
 }));
 
-// ۳. پارس کردن داده‌های ورودی (JSON)
-app.use(express.json({ limit: '10mb' }));
+// ۳. پارس کردن داده‌های ورودی (JSON و URL-encoded بدون محدودیت دست‌وپاگیر حجم)
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // ۴. پارس کردن کوکی‌ها جهت مدیریت ایمن نشست‌ها (Auth Security)
 app.use(cookieParser());
