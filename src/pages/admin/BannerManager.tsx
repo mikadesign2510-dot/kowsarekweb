@@ -245,7 +245,10 @@ export default function BannerManager() {
     setEditingBanner(null);
 
     try {
-      await storage.saveBannersToDB(updatedBanners);
+      const res = await storage.saveBannersToDB(updatedBanners);
+      if (!res.success) {
+        alert('خطا در ذخیره اسلاید در پایگاه‌داده سرور: ' + (res.message || 'خطای ناشناخته'));
+      }
     } catch (err) {
       console.warn('DB sync banners error:', err);
     }

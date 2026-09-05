@@ -2890,9 +2890,15 @@ export const storage = {
         headers,
         body: JSON.stringify({ banners })
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        console.error('Failed to sync banners to DB:', data.message);
+        return { success: false, message: data.message || 'خطا در ارتباط با سرور' };
+      }
+      return data;
     } catch (e) {
-      return { success: true };
+      console.error('Exception syncing banners to DB:', e);
+      return { success: false, message: String(e) };
     }
   },
 

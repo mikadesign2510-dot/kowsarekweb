@@ -955,7 +955,7 @@ export default function AdminNews() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-4">
               <label className="block text-sm font-bold text-slate-700">تعداد اخبار قابل نمایش در گردونه</label>
               <select 
@@ -970,6 +970,23 @@ export default function AdminNews() {
                 <option value={4}>۴ خبر (استاندارد)</option>
                 <option value={5}>۵ خبر (پرحجم)</option>
                 <option value={6}>۶ خبر (حداکثر)</option>
+              </select>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-bold text-slate-700">سایز قاب و کارت‌های اخبار سه بعدی</label>
+              <select 
+                value={siteSettings.newsCarouselSize || 'standard'}
+                onChange={(e) => {
+                  const newSettings = { ...siteSettings, newsCarouselSize: e.target.value };
+                  setSiteSettings(newSettings);
+                }}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 font-medium"
+              >
+                <option value="compact">فشرده (کوچک و جمع‌وجور)</option>
+                <option value="standard">استاندارد (متوسط)</option>
+                <option value="large">بزرگ (عریض و واضح)</option>
+                <option value="xlarge">بسیار بزرگ (سینمایی)</option>
               </select>
             </div>
 
