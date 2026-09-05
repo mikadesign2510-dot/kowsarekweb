@@ -11,7 +11,13 @@ import {
 } from 'lucide-react';
 
 export default function FormsPage() {
-  const [forms, setForms] = useState<FormItem[]>([]);
+  const [forms, setForms] = useState<FormItem[]>(() => {
+    try {
+      return storage.getForms().filter(f => f.isPublished !== false);
+    } catch {
+      return [];
+    }
+  });
   const [selectedType, setSelectedType] = useState<'all' | 'form' | 'pamphlet'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('همه');
@@ -33,15 +39,29 @@ export default function FormsPage() {
       loadForms();
     };
 
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'kowsar_forms' || e.key === null) {
+        loadForms();
+      }
+    };
+
     window.addEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
     window.addEventListener('kowsar_forms_changed', handleFormsChanged);
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
       window.removeEventListener('kowsar_forms_changed', handleFormsChanged);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
   const loadForms = async () => {
+    // ابتدا بلافاصله داده‌های موجود نمایش داده شوند تا تأخیری حس نشود
+    const localList = storage.getForms().filter(f => f.isPublished !== false);
+    if (localList.length > 0) {
+      setForms(localList);
+    }
     const list = await storage.syncFormsWithDB();
     const published = list.filter(f => f.isPublished !== false);
     setForms(published);

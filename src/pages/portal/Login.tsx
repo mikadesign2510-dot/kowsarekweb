@@ -146,7 +146,6 @@ export default function PortalLogin() {
 
         if (data.token) {
           localStorage.setItem('kowsar_portal_token', data.token);
-          localStorage.setItem('kowsar_jwt_token', data.token);
         }
         localStorage.setItem('kowsar_portal_auth', JSON.stringify(studentUser));
 

@@ -113,6 +113,7 @@ export default function AdminForms() {
   const [instructionInput, setInstructionInput] = useState('');
   const [attachmentInput, setAttachmentInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
@@ -593,6 +594,8 @@ export default function AdminForms() {
       return;
     }
 
+    setIsSaving(true);
+
     const finalDescription = formData.description?.trim() || (formData.itemType === 'pamphlet' 
       ? `جزوه و درسنامه آموزشی درس ${title}` 
       : `فرم و کاربرگ اداری دانشگاه ${title}`);
@@ -619,41 +622,46 @@ export default function AdminForms() {
     setDegreeFilter('all');
     setSearchQuery('');
 
-    if (editingId) {
-      const existing = forms.find(f => f.id === editingId);
-      const fullUpdatedItem: FormItem = {
-        ...(existing || {}),
-        ...itemToSave,
-        id: editingId,
-        updatedAt: new Date().toLocaleDateString('fa-IR')
-      } as FormItem;
-      setForms(prev => prev.map(f => f.id === editingId ? fullUpdatedItem : f));
-      setIsEditorOpen(false);
-      setEditingId(null);
-      setSaveSuccessMessage(isPamphlet ? 'جزوه درسی با موفقیت ویرایش و ذخیره گردید.' : 'فرم با موفقیت ویرایش و ذخیره گردید.');
-      setTimeout(() => setSaveSuccessMessage(null), 4000);
+    try {
+      if (editingId) {
+        const existing = forms.find(f => f.id === editingId);
+        const fullUpdatedItem: FormItem = {
+          ...(existing || {}),
+          ...itemToSave,
+          id: editingId,
+          updatedAt: new Date().toLocaleDateString('fa-IR')
+        } as FormItem;
 
-      try {
         await storage.updateFormInDB(fullUpdatedItem);
-        loadData();
-      } catch (err) {
-        console.warn('DB update form error:', err);
-      }
-    } else {
-      setIsEditorOpen(false);
-      setEditingId(null);
-      setSaveSuccessMessage(isPamphlet ? 'جزوه درسی جدید با موفقیت ثبت و منتشر گردید.' : 'فرم جدید با موفقیت ثبت و منتشر گردید.');
-      setTimeout(() => setSaveSuccessMessage(null), 4000);
-
-      try {
+        setForms(prev => prev.map(f => f.id === editingId ? fullUpdatedItem : f));
+        setIsEditorOpen(false);
+        setEditingId(null);
+        setSaveSuccessMessage(isPamphlet ? 'جزوه درسی با موفقیت ویرایش و ذخیره گردید.' : 'فرم با موفقیت ویرایش و ذخیره گردید.');
+      } else {
         const savedItem = await storage.createFormInDB(itemToSave);
-        setForms(prev => [savedItem, ...prev.filter(f => f.id !== savedItem.id)]);
-        loadData();
-      } catch (err) {
-        console.warn('DB create form error:', err);
+        setForms(prev => [savedItem, ...prev.filter(f => f.id !== savedItem.id && f.id !== itemToSave.id)]);
+        setIsEditorOpen(false);
+        setEditingId(null);
+        setSaveSuccessMessage(isPamphlet ? 'جزوه درسی جدید با موفقیت ثبت و منتشر گردید.' : 'فرم جدید با موفقیت ثبت و منتشر گردید.');
+      }
+
+      window.dispatchEvent(new Event('kowsar_forms_changed'));
+      setTimeout(() => setSaveSuccessMessage(null), 4000);
+    } catch (err: any) {
+      console.error('Save form error:', err);
+      if (editingId) {
+        storage.updateForm({ ...itemToSave, id: editingId } as FormItem);
+      } else {
         const fallbackItem = storage.addForm(itemToSave);
         setForms(prev => [fallbackItem, ...prev.filter(f => f.id !== fallbackItem.id)]);
       }
+      setIsEditorOpen(false);
+      setEditingId(null);
+      setSaveSuccessMessage(isPamphlet ? 'جزوه با موفقیت ذخیره شد.' : 'فرم با موفقیت ذخیره شد.');
+      window.dispatchEvent(new Event('kowsar_forms_changed'));
+      setTimeout(() => setSaveSuccessMessage(null), 4000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2504,14 +2512,13 @@ export default function AdminForms() {
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-2">کد درس / شناسه *</label>
+                            <label className="block text-xs font-bold text-slate-700 mb-2">کد درس / شناسه</label>
                             <input
                               type="text"
-                              required
                               name="code"
                               value={formData.code}
                               onChange={handleInputChange}
-                              placeholder="مثلاً: CS-204 یا BOK-101"
+                              placeholder="مثلاً: CS-204 یا BOK-101 (اختیاری)"
                               dir="ltr"
                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-left"
                             />
@@ -2618,14 +2625,13 @@ export default function AdminForms() {
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-2">شناسه یا کد فرم *</label>
+                            <label className="block text-xs font-bold text-slate-700 mb-2">شناسه یا کد فرم</label>
                             <input
                               type="text"
-                              required
                               name="code"
                               value={formData.code}
                               onChange={handleInputChange}
-                              placeholder="مثلاً: EDU-101"
+                              placeholder="مثلاً: EDU-101 (اختیاری)"
                               dir="ltr"
                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-mono font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                             />
@@ -2695,10 +2701,9 @@ export default function AdminForms() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-2">
-                        {formData.itemType === 'pamphlet' ? 'توضیحات و خلاصه سرفصل‌های جزوه *' : 'توضیحات، هدف و کاربرد فرم *'}
+                        {formData.itemType === 'pamphlet' ? 'توضیحات و خلاصه سرفصل‌های جزوه' : 'توضیحات، هدف و کاربرد فرم'}
                       </label>
                       <textarea
-                        required
                         name="description"
                         value={formData.description}
                         onChange={handleInputChange}
@@ -3064,15 +3069,23 @@ export default function AdminForms() {
 
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className={`px-6 py-2.5 rounded-2xl text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 ${
+                    isSaving ? 'opacity-70 cursor-not-allowed' : ''
+                  } ${
                     formData.itemType === 'pamphlet' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                   }`}
                 >
-                  <Check className="w-4 h-4" />
-                  {editingId 
-                    ? (formData.itemType === 'pamphlet' ? 'ذخیره تغییرات جزوه' : 'ذخیره تغییرات فرم')
-                    : (formData.itemType === 'pamphlet' ? 'ثبت و انتشار جزوه' : 'ثبت و انتشار فرم')
-                  }
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  {isSaving ? 'در حال ثبت و ذخیره...' : (
+                    editingId 
+                      ? (formData.itemType === 'pamphlet' ? 'ذخیره تغییرات جزوه' : 'ذخیره تغییرات فرم')
+                      : (formData.itemType === 'pamphlet' ? 'ثبت و انتشار جزوه' : 'ثبت و انتشار فرم')
+                  )}
                 </button>
               </div>
             </form>

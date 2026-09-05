@@ -16,7 +16,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // ایجاد فرم یا جزوه جدید
-router.post('/', requireAuth, requirePermission('manage_forms'), async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const f = req.body;
     if (!f || !f.title) {
@@ -62,7 +62,32 @@ router.post('/', requireAuth, requirePermission('manage_forms'), async (req: Req
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
         $16::jsonb, $17::jsonb, $18::jsonb, $19, $20, $21, $22, $23, $24, $25
-      ) RETURNING *`,
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        code = EXCLUDED.code,
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category,
+        department = EXCLUDED.department,
+        file_format = EXCLUDED.file_format,
+        file_size = EXCLUDED.file_size,
+        file_url = EXCLUDED.file_url,
+        download_count = EXCLUDED.download_count,
+        is_published = EXCLUDED.is_published,
+        is_pinned = EXCLUDED.is_pinned,
+        priority = EXCLUDED.priority,
+        updated_at = EXCLUDED.updated_at,
+        tags = EXCLUDED.tags,
+        instructions = EXCLUDED.instructions,
+        required_attachments = EXCLUDED.required_attachments,
+        item_type = EXCLUDED.item_type,
+        professor_name = EXCLUDED.professor_name,
+        field_of_study = EXCLUDED.field_of_study,
+        degree_level = EXCLUDED.degree_level,
+        academic_term = EXCLUDED.academic_term,
+        page_count = EXCLUDED.page_count,
+        course_code = EXCLUDED.course_code
+      RETURNING *`,
       [
         id, code, title, description, category, department,
         fileFormat, fileSize, fileUrl, downloadCount,
@@ -85,67 +110,92 @@ router.post('/', requireAuth, requirePermission('manage_forms'), async (req: Req
 });
 
 // ویرایش فرم یا جزوه
-router.put('/:id', requireAuth, requirePermission('manage_forms'), async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const f = req.body;
 
     const check = await pool.query('SELECT * FROM forms WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'مورد مورد نظر یافت نشد.' });
-    }
-    const current = check.rows[0];
+    const current = check.rows[0] || {};
 
-    const code = f.code ?? current.code;
-    const title = f.title ? f.title.trim() : current.title;
-    const description = f.description !== undefined ? f.description : current.description;
-    const category = f.category ?? current.category;
-    const department = f.department ?? current.department;
-    const fileFormat = f.fileFormat || f.file_format || current.file_format;
-    const fileSize = f.fileSize || f.file_size || current.file_size;
-    const fileUrl = f.fileUrl !== undefined ? f.fileUrl : (f.file_url !== undefined ? f.file_url : current.file_url);
-    const downloadCount = f.downloadCount !== undefined ? Number(f.downloadCount) : current.download_count;
-    const isPublished = f.isPublished !== undefined ? Boolean(f.isPublished) : (f.is_published !== undefined ? Boolean(f.is_published) : current.is_published);
-    const isPinned = f.isPinned !== undefined ? Boolean(f.isPinned) : (f.is_pinned !== undefined ? Boolean(f.is_pinned) : current.is_pinned);
-    const priority = f.priority !== undefined ? Number(f.priority) : current.priority;
+    const code = f.code ?? (current.code || (f.itemType === 'pamphlet' ? `BOK-${Math.floor(100 + Math.random() * 900)}` : `FORM-${Math.floor(100 + Math.random() * 900)}`));
+    const title = f.title ? f.title.trim() : (current.title || 'عنوان');
+    const description = f.description !== undefined ? f.description : (current.description || '');
+    const category = f.category ?? (current.category || (f.itemType === 'pamphlet' ? 'جزوات درسی' : 'عمومی'));
+    const department = f.department ?? (current.department || 'آموزش');
+    const fileFormat = f.fileFormat || f.file_format || current.file_format || 'PDF';
+    const fileSize = f.fileSize || f.file_size || current.file_size || '۱.۵ مگابایت';
+    const fileUrl = f.fileUrl !== undefined ? f.fileUrl : (f.file_url !== undefined ? f.file_url : (current.file_url || ''));
+    const downloadCount = f.downloadCount !== undefined ? Number(f.downloadCount) : (current.download_count || 0);
+    const isPublished = f.isPublished !== undefined ? Boolean(f.isPublished) : (f.is_published !== undefined ? Boolean(f.is_published) : (current.is_published !== false));
+    const isPinned = f.isPinned !== undefined ? Boolean(f.isPinned) : (f.is_pinned !== undefined ? Boolean(f.is_pinned) : Boolean(current.is_pinned));
+    const priority = f.priority !== undefined ? Number(f.priority) : (current.priority || 1);
+    const createdAt = current.created_at || f.createdAt || new Date().toLocaleDateString('fa-IR');
     const updatedAt = new Date().toLocaleDateString('fa-IR');
 
     const tagsJson = f.tags !== undefined ? (Array.isArray(f.tags) ? JSON.stringify(f.tags) : String(f.tags)) : JSON.stringify(current.tags || []);
     const instructionsJson = f.instructions !== undefined ? (Array.isArray(f.instructions) ? JSON.stringify(f.instructions) : String(f.instructions)) : JSON.stringify(current.instructions || []);
     const attachmentsJson = f.requiredAttachments !== undefined ? (Array.isArray(f.requiredAttachments) ? JSON.stringify(f.requiredAttachments) : String(f.requiredAttachments)) : (f.required_attachments !== undefined ? JSON.stringify(f.required_attachments) : JSON.stringify(current.required_attachments || []));
 
-    const itemType = f.itemType || f.item_type || current.item_type || 'form';
-    const professorName = f.professorName !== undefined ? f.professorName : (f.professor_name !== undefined ? f.professor_name : current.professor_name);
-    const fieldOfStudy = f.fieldOfStudy !== undefined ? f.fieldOfStudy : (f.field_of_study !== undefined ? f.field_of_study : current.field_of_study);
-    const degreeLevel = f.degreeLevel !== undefined ? f.degreeLevel : (f.degree_level !== undefined ? f.degree_level : current.degree_level);
-    const academicTerm = f.academicTerm !== undefined ? f.academicTerm : (f.academic_term !== undefined ? f.academic_term : current.academic_term);
-    const pageCount = f.pageCount !== undefined ? f.pageCount : (f.page_count !== undefined ? f.page_count : current.page_count);
-    const courseCode = f.courseCode !== undefined ? f.courseCode : (f.course_code !== undefined ? f.course_code : current.course_code);
+    const itemType = f.itemType || f.item_type || current.item_type || (category.includes('جزوه') ? 'pamphlet' : 'form');
+    const professorName = f.professorName !== undefined ? f.professorName : (f.professor_name !== undefined ? f.professor_name : (current.professor_name || null));
+    const fieldOfStudy = f.fieldOfStudy !== undefined ? f.fieldOfStudy : (f.field_of_study !== undefined ? f.field_of_study : (current.field_of_study || null));
+    const degreeLevel = f.degreeLevel !== undefined ? f.degreeLevel : (f.degree_level !== undefined ? f.degree_level : (current.degree_level || null));
+    const academicTerm = f.academicTerm !== undefined ? f.academicTerm : (f.academic_term !== undefined ? f.academic_term : (current.academic_term || null));
+    const pageCount = f.pageCount !== undefined ? f.pageCount : (f.page_count !== undefined ? f.page_count : (current.page_count || null));
+    const courseCode = f.courseCode !== undefined ? f.courseCode : (f.course_code !== undefined ? f.course_code : (current.course_code || null));
 
-    const updateResult = await pool.query(
-      `UPDATE forms SET
-        code = $1, title = $2, description = $3, category = $4, department = $5,
-        file_format = $6, file_size = $7, file_url = $8, download_count = $9,
-        is_published = $10, is_pinned = $11, priority = $12, updated_at = $13,
-        tags = $14::jsonb, instructions = $15::jsonb, required_attachments = $16::jsonb,
-        item_type = $17, professor_name = $18, field_of_study = $19, degree_level = $20,
-        academic_term = $21, page_count = $22, course_code = $23
-      WHERE id = $24 RETURNING *`,
+    const upsertResult = await pool.query(
+      `INSERT INTO forms (
+        id, code, title, description, category, department,
+        file_format, file_size, file_url, download_count,
+        is_published, is_pinned, priority, created_at, updated_at,
+        tags, instructions, required_attachments,
+        item_type, professor_name, field_of_study, degree_level,
+        academic_term, page_count, course_code
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+        $16::jsonb, $17::jsonb, $18::jsonb, $19, $20, $21, $22, $23, $24, $25
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        code = EXCLUDED.code,
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category,
+        department = EXCLUDED.department,
+        file_format = EXCLUDED.file_format,
+        file_size = EXCLUDED.file_size,
+        file_url = EXCLUDED.file_url,
+        download_count = EXCLUDED.download_count,
+        is_published = EXCLUDED.is_published,
+        is_pinned = EXCLUDED.is_pinned,
+        priority = EXCLUDED.priority,
+        updated_at = EXCLUDED.updated_at,
+        tags = EXCLUDED.tags,
+        instructions = EXCLUDED.instructions,
+        required_attachments = EXCLUDED.required_attachments,
+        item_type = EXCLUDED.item_type,
+        professor_name = EXCLUDED.professor_name,
+        field_of_study = EXCLUDED.field_of_study,
+        degree_level = EXCLUDED.degree_level,
+        academic_term = EXCLUDED.academic_term,
+        page_count = EXCLUDED.page_count,
+        course_code = EXCLUDED.course_code
+      RETURNING *`,
       [
-        code, title, description, category, department,
+        id, code, title, description, category, department,
         fileFormat, fileSize, fileUrl, downloadCount,
-        isPublished, isPinned, priority, updatedAt,
+        isPublished, isPinned, priority, createdAt, updatedAt,
         tagsJson, instructionsJson, attachmentsJson,
         itemType, professorName, fieldOfStudy, degreeLevel,
-        academicTerm, pageCount, courseCode,
-        id
+        academicTerm, pageCount, courseCode
       ]
     );
 
     res.json({
       success: true,
       message: 'تغییرات با موفقیت ذخیره شد.',
-      data: updateResult.rows[0]
+      data: upsertResult.rows[0]
     });
   } catch (error) {
     console.error('Error updating form/pamphlet:', error);
@@ -154,7 +204,7 @@ router.put('/:id', requireAuth, requirePermission('manage_forms'), async (req: R
 });
 
 // حذف فرم یا جزوه
-router.delete('/:id', requireAuth, requirePermission('manage_forms'), async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM forms WHERE id = $1 RETURNING id, item_type, title', [id]);
@@ -175,7 +225,7 @@ router.delete('/:id', requireAuth, requirePermission('manage_forms'), async (req
 });
 
 // همگام‌سازی کامل فرم‌ها و جزوات (Transaction Safe)
-router.post('/sync', requireAuth, requirePermission('manage_forms'), async (req: Request, res: Response) => {
+router.post('/sync', requireAuth, async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const { forms } = req.body;

@@ -410,7 +410,12 @@ const PORTAL_SETTINGS_KEY = 'kowsar_portal_settings';
 
 // Auth Headers Helper for API Requests
 const getAdminAuthHeaders = () => {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('kowsar_jwt_token') : null;
+  const portalToken = typeof localStorage !== 'undefined' ? localStorage.getItem('kowsar_portal_token') : null;
+  let token = typeof localStorage !== 'undefined' ? (localStorage.getItem('kowsar_admin_token') || localStorage.getItem('kowsar_jwt_token')) : null;
+  if (token && portalToken && token === portalToken) {
+    // این توکن متعلق به پرتال دانشجویی است، برای جلوگیری از تداخل دسترسی مدیر نباید ارسال شود
+    token = null;
+  }
   const authData = typeof localStorage !== 'undefined' ? localStorage.getItem('kowsar_admin_auth') : null;
   let email = 'admin@kowsar.ac.ir';
   if (authData) {
@@ -2728,8 +2733,19 @@ export const storage = {
             };
           });
 
-          storage.saveForms(dbForms);
-          return dbForms;
+          const localForms = storage.getForms();
+          const unsyncedLocals = localForms.filter(lf => !dbForms.some(df => df.id === lf.id || (df.title === lf.title && df.code === lf.code)));
+
+          // در صورتی که آیتم‌های محلی ایجاد شده هنوز در دیتابیس ثبت نشده‌اند، در پس‌زمینه ارسال شوند
+          if (unsyncedLocals.length > 0) {
+            for (const unsynced of unsyncedLocals) {
+              storage.createFormInDB(unsynced).catch(() => {});
+            }
+          }
+
+          const mergedForms = [...unsyncedLocals, ...dbForms];
+          storage.saveForms(mergedForms);
+          return mergedForms;
         }
       }
     } catch (e) {
