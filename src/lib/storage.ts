@@ -86,6 +86,46 @@ export interface StudyField {
   order: number;
 }
 
+export type PinnedSliderTemplate = 'split' | 'cinematic' | 'card' | 'banner';
+export type PinnedSliderHeight = 'compact' | 'medium' | 'tall';
+export type PinnedSliderAccent = 'amber' | 'blue' | 'emerald' | 'purple' | 'rose';
+
+export interface PinnedNewsSliderConfig {
+  enabled: boolean;
+  template: PinnedSliderTemplate;
+  badgeTitle: string; // e.g. 'اخبار ویژه'
+  height: PinnedSliderHeight;
+  autoPlayInterval: number; // 0 to pause
+  showBadges: boolean;
+  showCategory: boolean;
+  showMeta: boolean;
+  showReadTime: boolean;
+  showSummary: boolean;
+  showControls: boolean;
+  showBottomTabs: boolean;
+  accentColor: PinnedSliderAccent;
+  imagePosition: 'center' | 'top' | 'bottom';
+  roundedCorners: 'normal' | 'large' | 'full';
+}
+
+export const defaultPinnedSliderConfig: PinnedNewsSliderConfig = {
+  enabled: true,
+  template: 'split',
+  badgeTitle: 'اخبار ویژه',
+  height: 'compact',
+  autoPlayInterval: 6000,
+  showBadges: true,
+  showCategory: true,
+  showMeta: true,
+  showReadTime: true,
+  showSummary: true,
+  showControls: true,
+  showBottomTabs: true,
+  accentColor: 'amber',
+  imagePosition: 'center',
+  roundedCorners: 'large'
+};
+
 export interface SiteSettings {
   logoUrl?: string;
   logoTitle?: string;
@@ -108,6 +148,7 @@ export interface SiteSettings {
   newsCarouselStyle?: 'default' | 'glass' | 'minimal';
   newsCarouselCount?: number;
   newsCarouselArrowSpacing?: 'tight' | 'normal' | 'wide' | 'extra';
+  pinnedNewsSliderConfig?: PinnedNewsSliderConfig;
   formsBadge?: string;
   formsTitle?: string;
   formsSubtitle?: string;
@@ -788,9 +829,10 @@ const defaultSettings: SiteSettings = {
   featuresItems: defaultFeatures,
   contactPageTitle: 'ارتباط با ما',
   contactPageSubtitle: 'راه‌های ارتباطی با مرکز آموزش علمی کاربردی کوثر کاکی',
-  contactMapIframe: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d113401.78201502476!2d51.4883445353597!3d28.339247657989914!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3fb148ef2f9efddf%3A0x6bbfd1487f34731a!2zS2FraSwgQnVzaGVociBQcm92aW5jZSwgSXJhbg!5e0!3m2!1sen!2sde!4v1716911578330!5m2!1sen!2sde" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+  contactMapIframe: '<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=28.342913%2C51.526707" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>',
   newsBadge: 'اطلاع‌رسانی مرکز',
   newsTitle: 'اخبار و رویدادها',
+  pinnedNewsSliderConfig: defaultPinnedSliderConfig,
   formsBadge: 'میز خدمت الکترونیک، جزوات درسی و دبیرخانه آموزشی مرکز آموزش علمی کاربردی کوثر کاکی',
   formsTitle: 'جزوه و فرم‌ها',
   formsSubtitle: 'در این بخش می‌توانید تمامی جزوات و منابع درسی، کاربرگ‌های آموزشی، درخواست‌های وام، تسویه حساب و آیین‌نامه‌ها را دریافت فرمایید.',
@@ -1043,13 +1085,13 @@ export const defaultContactConfig: ContactPageConfig = {
   addressTitle: 'نشانی مجتمع دانشگاهی',
   address: 'استان بوشهر، شهرستان دشتی، شهر کاکی، بلوار ولیعصر (عج)، جنب میدان انقلاب، مرکز آموزش علمی کاربردی کوثر کاکی',
   postalCode: '۷۵۴۵۱-۹۸۷۶۵',
-  latitude: 28.339248,
-  longitude: 51.524835,
-  neshanLink: 'https://nshn.ir/search/28.339248,51.524835',
-  baladLink: 'https://balad.ir/location?latitude=28.339248&longitude=51.524835',
-  googleMapsLink: 'https://maps.app.goo.gl/pH9PehuwXuWNXwcL8',
-  wazeLink: 'https://waze.com/ul?ll=28.339248,51.524835&navigate=yes',
-  mapIframe: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d113401.78201502476!2d51.4883445353597!3d28.339247657989914!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3fb148ef2f9efddf%3A0x6bbfd1487f34731a!2zS2FraSwgQnVzaGVociBQcm92aW5jZSwgSXJhbg!5e0!3m2!1sen!2sde!4v1716911578330!5m2!1sen!2sde" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+  latitude: 28.342913,
+  longitude: 51.526707,
+  neshanLink: 'https://nshn.ir/search/28.342913,51.526707',
+  baladLink: 'https://balad.ir/location?latitude=28.342913&longitude=51.526707',
+  googleMapsLink: 'https://www.google.com/maps?q=28.34291274764676,51.52670733886608',
+  wazeLink: 'https://waze.com/ul?ll=28.342913,51.526707&navigate=yes',
+  mapIframe: '<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=28.342913%2C51.526707" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>',
   phoneMain: '۰۷۷-۳۵۳۲۰۰۰۰',
   phoneSecondary: '۰۷۷-۳۵۳۲۲۴۴۱',
   phoneFax: '۰۷۷-۳۵۳۲۹۹۹۰',
@@ -1282,7 +1324,11 @@ export const storage = {
         navLinks,
         statsItems: parsed.statsItems?.length ? parsed.statsItems : defaultStats,
         featuresItems: parsed.featuresItems?.length ? parsed.featuresItems : defaultFeatures,
-        studyFields: parsed.studyFields?.length ? parsed.studyFields : defaultSettings.studyFields
+        studyFields: parsed.studyFields?.length ? parsed.studyFields : defaultSettings.studyFields,
+        pinnedNewsSliderConfig: {
+          ...defaultPinnedSliderConfig,
+          ...(parsed.pinnedNewsSliderConfig || {})
+        }
       };
     } catch {
       return defaultSettings;
@@ -3406,13 +3452,34 @@ export const storage = {
       const data = localStorage.getItem(CONTACT_CONFIG_KEY);
       if (!data) return defaultContactConfig;
       const parsed = JSON.parse(data);
-      const googleMapsLink = (!parsed.googleMapsLink || parsed.googleMapsLink.includes('q=28.339248'))
+      
+      const isOldCoordinates = !parsed.latitude || 
+        Math.abs(parsed.latitude - 28.339248) < 0.001 || 
+        !parsed.longitude || 
+        Math.abs(parsed.longitude - 51.524835) < 0.001;
+
+      const latitude = isOldCoordinates ? defaultContactConfig.latitude : parsed.latitude;
+      const longitude = isOldCoordinates ? defaultContactConfig.longitude : parsed.longitude;
+      const neshanLink = isOldCoordinates || !parsed.neshanLink ? defaultContactConfig.neshanLink : parsed.neshanLink;
+      const baladLink = isOldCoordinates || !parsed.baladLink ? defaultContactConfig.baladLink : parsed.baladLink;
+      const googleMapsLink = (isOldCoordinates || !parsed.googleMapsLink || parsed.googleMapsLink.includes('pH9PehuwXuWNXwcL8'))
         ? defaultContactConfig.googleMapsLink
         : parsed.googleMapsLink;
+      const wazeLink = isOldCoordinates || !parsed.wazeLink ? defaultContactConfig.wazeLink : parsed.wazeLink;
+      const mapIframe = (isOldCoordinates || !parsed.mapIframe || parsed.mapIframe.includes('2zS2FraSwgQnVzaGVociBQcm92aW5jZSwgSXJhbg') || parsed.mapIframe.includes('maps.google.com/maps?q='))
+        ? defaultContactConfig.mapIframe
+        : parsed.mapIframe;
+
       return {
         ...defaultContactConfig,
         ...parsed,
+        latitude,
+        longitude,
+        neshanLink,
+        baladLink,
         googleMapsLink,
+        wazeLink,
+        mapIframe,
         departments: parsed.departments?.length ? parsed.departments : defaultContactConfig.departments,
         socialLinks: parsed.socialLinks?.length ? parsed.socialLinks : defaultContactConfig.socialLinks,
         faqs: parsed.faqs?.length ? parsed.faqs : defaultContactConfig.faqs,

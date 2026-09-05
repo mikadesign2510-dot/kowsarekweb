@@ -1042,6 +1042,33 @@ export default function AdminContactManager() {
                     className="w-full px-3.5 py-2 text-sm  rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
+
+                <div className="sm:col-span-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lat = 28.342913;
+                      const lng = 51.526707;
+                      const newCfg = {
+                        ...config,
+                        latitude: lat,
+                        longitude: lng,
+                        neshanLink: `https://nshn.ir/search/${lat},${lng}`,
+                        baladLink: `https://balad.ir/location?latitude=${lat}&longitude=${lng}`,
+                        googleMapsLink: `https://www.google.com/maps?q=28.34291274764676,51.52670733886608`,
+                        wazeLink: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,
+                        mapIframe: `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=28.342913%2C51.526707" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`
+                      };
+                      setConfig(newCfg);
+                      storage.updateContactConfig(newCfg);
+                      alert('مختصات دقیق دانشگاه با موفقیت در نقشه، نشان، بلد، گوگل‌مپ و ویز تنظیم شد.');
+                    }}
+                    className="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                  >
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                    <span>تنظیم خودکار روی مختصات دقیق دانشگاه (۲۸.۳۴۲۹۱۲, ۵۱.۵۲۶۷۰۷)</span>
+                  </button>
+                </div>
               </div>
             </div>
 

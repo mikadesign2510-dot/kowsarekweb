@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { storage, NewsItem, NewsAttachment, SidebarWidget, GalleryAlbum, GalleryImage } from '../../lib/storage';
 import { uploadFileToServer, uploadMultipleFilesToServer } from '../../lib/uploadHelper';
 import SidebarWidgetsEditor from '../../components/admin/SidebarWidgetsEditor';
+import PinnedSliderSettingsEditor from '../../components/admin/PinnedSliderSettingsEditor';
 import { 
   Plus, Edit2, Trash2, Search, Filter, Eye,
   PanelRightClose,
@@ -49,7 +50,7 @@ const DEFAULT_CATEGORIES = ['آموزشی', 'رویدادها', 'امکانات'
 export default function AdminNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
-  const [managerTab, setManagerTab] = useState<'news' | 'sidebars' | 'settings'>('news');
+  const [managerTab, setManagerTab] = useState<'news' | 'pinned_slider' | 'sidebars' | 'settings'>('news');
   const [siteSettings, setSiteSettings] = useState<any>(storage.getSettings());
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -823,10 +824,10 @@ export default function AdminNews() {
       </div>
 
       {/* Manager Tabs */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl max-w-fit mx-auto md:mx-0">
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl max-w-fit mx-auto md:mx-0 flex-wrap gap-1">
         <button
           onClick={() => setManagerTab('news')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
             managerTab === 'news' 
               ? 'bg-white text-blue-600 shadow-sm' 
               : 'text-slate-500 hover:text-slate-700'
@@ -836,8 +837,22 @@ export default function AdminNews() {
           مدیریت محتوای اخبار
         </button>
         <button
+          onClick={() => setManagerTab('pinned_slider')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+            managerTab === 'pinned_slider' 
+              ? 'bg-white text-amber-600 shadow-sm ring-1 ring-amber-400/30' 
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Pin className="w-4 h-4 text-amber-500 fill-amber-500" />
+          <span>شخصی‌سازی و قالب‌های اخبار ویژه</span>
+          <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-black">
+            قالب‌ها
+          </span>
+        </button>
+        <button
           onClick={() => setManagerTab('sidebars')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
             managerTab === 'sidebars' 
               ? 'bg-white text-blue-600 shadow-sm' 
               : 'text-slate-500 hover:text-slate-700'
@@ -848,7 +863,7 @@ export default function AdminNews() {
         </button>
         <button
           onClick={() => setManagerTab('settings')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
             managerTab === 'settings' 
               ? 'bg-white text-blue-600 shadow-sm' 
               : 'text-slate-500 hover:text-slate-700'
@@ -859,7 +874,17 @@ export default function AdminNews() {
         </button>
       </div>
 
-      {managerTab === 'sidebars' ? (
+      {managerTab === 'pinned_slider' ? (
+        <PinnedSliderSettingsEditor
+          currentConfig={siteSettings.pinnedNewsSliderConfig}
+          newsItems={news}
+          onSave={(newConfig) => {
+            const updated = { ...siteSettings, pinnedNewsSliderConfig: newConfig };
+            setSiteSettings(updated);
+            storage.updateSettings(updated);
+          }}
+        />
+      ) : managerTab === 'sidebars' ? (
         <div className="bg-slate-50 rounded-3xl p-6 md:p-8 border border-slate-200">
           <SidebarWidgetsEditor 
             widgets={siteSettings.newsWidgets || []} 

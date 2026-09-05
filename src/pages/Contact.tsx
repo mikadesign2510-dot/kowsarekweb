@@ -467,7 +467,11 @@ export default function Contact() {
                   {config.mapIframe ? (
                     <div 
                       className="w-full h-full"
-                      dangerouslySetInnerHTML={{ __html: config.mapIframe }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: (config.mapIframe.includes('maps.google.com/maps?q=') || config.mapIframe.includes('2zS2FraSwgQnVzaGVociBQcm92aW5jZSwgSXJhbg'))
+                          ? `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=${config.latitude || 28.342913}%2C${config.longitude || 51.526707}" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`
+                          : config.mapIframe 
+                      }}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-slate-400 text-sm">
@@ -476,10 +480,21 @@ export default function Contact() {
                   )}
 
                   {/* Floating map badge */}
-                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm text-xs font-bold text-slate-800 flex items-center gap-1.5 border border-slate-100 pointer-events-none">
+                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm text-xs font-bold text-slate-800 flex items-center gap-1.5 border border-slate-100 pointer-events-none z-10">
                     <MapPin className="w-3.5 h-3.5 text-blue-600" />
                     <span>موقعیت مکانی مجتمع دانشگاهی</span>
                   </div>
+
+                  {/* Open in Google Maps link */}
+                  <a
+                    href={config.googleMapsLink || `https://www.google.com/maps?q=${config.latitude || 28.342913},${config.longitude || 51.526707}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="absolute top-3 left-3 bg-white/95 hover:bg-white backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm text-xs font-bold text-slate-700 hover:text-blue-600 flex items-center gap-1.5 border border-slate-100 transition z-10"
+                  >
+                    <span>باز کردن در گوگل‌مپ</span>
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </a>
                 </div>
 
                 {/* 1-Click Navigation Apps Bar */}

@@ -3,10 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { storage, NewsItem } from '../lib/storage';
 import DynamicSidebar from '../components/DynamicSidebar';
+import PinnedNewsSlider from '../components/PinnedNewsSlider';
 import { 
   Search, Calendar, ArrowLeft, Tag, Filter, 
   Sparkles, Newspaper, ChevronLeft, ChevronRight,
-  Layers, AlertCircle, FileText, Eye, Clock, User
+  Layers, AlertCircle, FileText, Eye, Clock, User, Pin
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 6;
@@ -87,22 +88,26 @@ export default function NewsList() {
       });
   }, [allNews, searchQuery, selectedCategory, selectedTag, sortBy]);
 
-  // Featured news (highest pinned or first news when no filter is active)
-  const featuredNews = useMemo(() => {
-    if (selectedCategory === 'همه' && !selectedTag && searchQuery === '' && allNews.length > 0) {
-      const pinned = allNews.find(n => n.isPinned);
-      return pinned || allNews[0];
-    }
-    return null;
-  }, [allNews, selectedCategory, selectedTag, searchQuery]);
+  // Pinned news items for the top interactive slider
+  const pinnedNews = useMemo(() => {
+    const pinned = allNews.filter(n => n.isPinned);
+    if (pinned.length > 0) return pinned;
+    // Fallback if none pinned yet: top 3 news items so the slider is always active and engaging
+    return allNews.slice(0, 3);
+  }, [allNews]);
+
+  const showPinnedSlider = 
+    settings.pinnedNewsSliderConfig?.enabled !== false &&
+    currentPage === 1 && 
+    selectedCategory === 'همه' && 
+    !selectedTag && 
+    searchQuery.trim() === '' && 
+    pinnedNews.length > 0;
 
   // Paginated list
   const gridItems = useMemo(() => {
-    if (featuredNews && currentPage === 1 && selectedCategory === 'همه' && !selectedTag && searchQuery === '') {
-      return filteredNews.filter(n => n.id !== featuredNews.id);
-    }
     return filteredNews;
-  }, [filteredNews, featuredNews, currentPage, selectedCategory, selectedTag, searchQuery]);
+  }, [filteredNews]);
 
   const totalPages = Math.ceil(gridItems.length / ITEMS_PER_PAGE) || 1;
   const paginatedNews = gridItems.slice(
@@ -146,6 +151,33 @@ export default function NewsList() {
             </p>
           </div>
         </div>
+
+        {/* Pinned News Slider Section */}
+        {showPinnedSlider && (
+          <motion.section
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  {settings.pinnedNewsSliderConfig?.badgeTitle || 'اخبار ویژه'}
+                </h2>
+              </div>
+              <span className="text-xs text-slate-500 font-medium hidden sm:inline-block">
+                مهم‌ترین اطلاعیه‌ها و رویدادهای برگزیده مرکز
+              </span>
+            </div>
+
+            <PinnedNewsSlider items={pinnedNews} config={settings.pinnedNewsSliderConfig} />
+          </motion.section>
+        )}
 
         {/* Active Tag Notice */}
         {selectedTag && (
@@ -240,65 +272,6 @@ export default function NewsList() {
           </div>
         </div>
 
-        {/* Featured News Hero Card */}
-        {featuredNews && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all grid grid-cols-1 lg:grid-cols-12 group"
-          >
-            <div className="lg:col-span-7 relative h-72 lg:h-auto overflow-hidden">
-              <img
-                src={featuredNews.image}
-                alt={featuredNews.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute top-4 right-4 bg-blue-600 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                {featuredNews.isPinned ? 'خبر سنجاق شده و ویژه' : 'جدیدترین رویداد'}
-              </div>
-            </div>
-
-            <div className="lg:col-span-5 p-8 md:p-10 flex flex-col justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400 mb-4">
-                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100">
-                    {featuredNews.category}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>{featuredNews.date}</span>
-                  </div>
-                  {featuredNews.views !== undefined && (
-                    <div className="flex items-center gap-1 text-slate-400">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>{featuredNews.views}</span>
-                    </div>
-                  )}
-                </div>
-
-                <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 leading-tight group-hover:text-blue-600 transition-colors">
-                  {featuredNews.title}
-                </h2>
-
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed line-clamp-4 font-light mb-6">
-                  {featuredNews.summary}
-                </p>
-              </div>
-
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-                <Link
-                  to={`/news/${featuredNews.id}`}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-md shadow-blue-500/20 hover:shadow-lg transition-all group-hover:gap-3"
-                >
-                  مشاهده و مطالعه کامل خبر
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {/* Main News Grid & Sidebar Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
@@ -342,9 +315,9 @@ export default function NewsList() {
                           {item.category}
                         </div>
                         {item.isPinned && (
-                          <div className="bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" />
-                            ویژه
+                          <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-2.5 py-1 rounded-full text-[10px] font-black shadow-md flex items-center gap-1 ring-1 ring-amber-300/80">
+                            <Pin className="w-3 h-3 fill-slate-950 text-slate-950" />
+                            سنجاق‌شده
                           </div>
                         )}
                       </div>
