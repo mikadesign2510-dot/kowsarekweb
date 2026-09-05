@@ -115,7 +115,7 @@ export function requireRole(allowedRoles: string[]) {
   };
 }
 
-export function requirePermission(permissionKey: string, allowedRoles: string[] = ['super_admin', 'admin', 'custom_expert', 'education_expert', 'cultural_expert']) {
+export function requirePermission(permissionKey: string, allowedRoles: string[] = []) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       if (req.headers['x-admin-email']) {
@@ -149,7 +149,7 @@ export function requirePermission(permissionKey: string, allowedRoles: string[] 
       return next();
     }
 
-    if (allowedRoles.includes(req.user.role)) {
+    if (allowedRoles.length > 0 && allowedRoles.includes(req.user.role)) {
       return next();
     }
 

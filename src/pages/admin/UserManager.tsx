@@ -169,16 +169,29 @@ export default function AdminUsers() {
   };
 
   useEffect(() => {
-    // Basic protection - verify super_admin
+    // Basic protection - verify super_admin or manage_users permission
     const authData = localStorage.getItem('kowsar_admin_auth');
     if (authData) {
       try {
         const user = JSON.parse(authData);
-        if (user.role !== 'super_admin') {
+        let userPerms: string[] = [];
+        if (Array.isArray(user.permissions)) {
+          userPerms = user.permissions;
+        } else if (typeof user.permissions === 'string') {
+          try { userPerms = JSON.parse(user.permissions || '[]'); } catch { userPerms = []; }
+        }
+        
+        const hasAccess = user.role === 'super_admin' || 
+          userPerms.includes('*') || 
+          userPerms.includes('manage_users');
+
+        if (!hasAccess) {
           navigate('/admin');
+          return;
         }
       } catch {
         navigate('/admin/login');
+        return;
       }
     }
     loadUsers();

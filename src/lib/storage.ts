@@ -3626,6 +3626,36 @@ export const storage = {
       }
     } catch (e) { console.error(e); }
   },
+  syncUsersWithDB: async () => {
+    try {
+      const res = await fetch('/api/users', { headers: getAdminAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const currentUsers = storage.getUsers();
+          const merged = json.data.map((u: any) => {
+            const local = currentUsers.find(lu => lu.id === u.id || lu.email === u.email);
+            return {
+              id: u.id,
+              name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || local?.name || u.email,
+              firstName: u.firstName || local?.firstName || '',
+              lastName: u.lastName || local?.lastName || '',
+              nationalId: u.nationalId || local?.nationalId || '',
+              mobile: u.mobile || local?.mobile || '',
+              email: u.email,
+              password: u.password || local?.password || '',
+              role: u.role || local?.role || 'education_expert',
+              permissions: Array.isArray(u.permissions) ? u.permissions : (typeof u.permissions === 'string' ? JSON.parse(u.permissions || '[]') : (local?.permissions || []))
+            };
+          });
+          localStorage.setItem(USERS_KEY, JSON.stringify(merged));
+          return merged;
+        }
+      }
+    } catch (e) {
+      console.warn('Sync users with DB error:', e);
+    }
+  },
   syncAllWithDB: async () => {
     try {
       storage.seedPortalUsers();
@@ -3636,11 +3666,12 @@ export const storage = {
         storage.syncRegistrationsWithDB(),
         storage.syncBannersWithDB(),
         storage.syncFormsWithDB(),
-                storage.syncPresentationWithDB(),
+        storage.syncPresentationWithDB(),
         storage.syncStudentsWithDB(),
         storage.syncTicketsWithDB(),
         storage.syncReceiptsWithDB(),
-        storage.syncContactWithDB()
+        storage.syncContactWithDB(),
+        storage.syncUsersWithDB()
       ]);
     } catch (e) {
       console.warn('Database full sync had partial errors:', e);

@@ -1,18 +1,15 @@
 module.exports = {
   apps: [
     {
-      name: 'kowsar-portal',
-      script: 'dist/server.cjs',
-      instances: 'max',
-      exec_mode: 'cluster',
+      name: 'kowsar-university',
+      script: './dist/server.cjs',
+      instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
       env: {
-        NODE_ENV: 'production'
-      },
-      env_production: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        PORT: 3000
       }
     }
   ]

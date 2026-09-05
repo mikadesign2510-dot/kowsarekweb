@@ -176,6 +176,7 @@ export default function AdminLayout() {
               }
               setCurrentUser(freshUser);
               localStorage.setItem('kowsar_admin_auth', JSON.stringify(freshUser));
+              storage.updateUser(freshUser.id, freshUser);
             }
           })
           .catch(() => {});
@@ -297,7 +298,7 @@ export default function AdminLayout() {
     if (item.permissionKey === 'dashboard' || item.path === '/admin') return true;
 
     // If explicit permission is assigned to user
-    if (userPerms && userPerms.length > 0 && userPerms.includes(item.permissionKey)) {
+    if (userPerms && userPerms.length > 0 && (userPerms.includes(item.permissionKey) || userPerms.includes('*'))) {
       return true;
     }
 

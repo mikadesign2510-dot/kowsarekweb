@@ -38,16 +38,29 @@ export default function AdminSettings() {
   };
 
   useEffect(() => {
-    // Only super_admin can edit settings
+    // Only super_admin or manage_settings permission can edit settings
     const authData = localStorage.getItem('kowsar_admin_auth');
     if (authData) {
       try {
         const user = JSON.parse(authData);
-        if (user.role !== 'super_admin') {
+        let userPerms: string[] = [];
+        if (Array.isArray(user.permissions)) {
+          userPerms = user.permissions;
+        } else if (typeof user.permissions === 'string') {
+          try { userPerms = JSON.parse(user.permissions || '[]'); } catch { userPerms = []; }
+        }
+        
+        const hasAccess = user.role === 'super_admin' || 
+          userPerms.includes('*') || 
+          userPerms.includes('manage_settings');
+
+        if (!hasAccess) {
           navigate('/admin');
+          return;
         }
       } catch {
         navigate('/admin/login');
+        return;
       }
     }
   }, [navigate]);
