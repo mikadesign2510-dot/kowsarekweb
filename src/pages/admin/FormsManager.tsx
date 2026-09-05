@@ -180,8 +180,13 @@ export default function AdminForms() {
       if (res.ok) {
         setServerFiles(prev => prev.filter(f => f.name !== filename));
         fetchFoldersStats();
+        fetchServerFiles(selectedServerFolder === 'all' ? undefined : selectedServerFolder);
+        window.dispatchEvent(new Event('kowsar_forms_changed'));
         setSaveSuccessMessage('فایل با موفقیت از سرور حذف شد.');
         setTimeout(() => setSaveSuccessMessage(null), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'خطا در حذف فایل از سرور');
       }
     } catch (err: any) {
       alert('خطا در حذف فایل از سرور: ' + (err?.message || ''));
@@ -236,6 +241,16 @@ export default function AdminForms() {
     fetchFoldersStats();
     fetchServerFiles();
     
+    // گوش دادن به تغییرات فرم‌ها و جزوات جهت بروزرسانی خودکار آنی صفحه بدون نیاز به رفرش
+    const handleFormsChanged = () => {
+      const current = storage.getForms();
+      setForms(current);
+      fetchFoldersStats();
+    };
+
+    window.addEventListener('kowsar_forms_changed', handleFormsChanged);
+    window.addEventListener('storage', handleFormsChanged);
+
     // Auto-migrate fw_links to higher_ed_systems
     let currentSettings = storage.getSettings();
     if (currentSettings.formsWidgets) {
@@ -252,6 +267,11 @@ export default function AdminForms() {
         setSiteSettings(newSettings);
       }
     }
+
+    return () => {
+      window.removeEventListener('kowsar_forms_changed', handleFormsChanged);
+      window.removeEventListener('storage', handleFormsChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -344,28 +364,41 @@ export default function AdminForms() {
     const file = e.target.files?.[0];
     if (file) {
       const ext = file.name.split('.').pop()?.toUpperCase() || 'PDF';
+      const cleanName = file.name.substring(0, file.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim();
+      const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(2)} مگابایت`;
+      
       setIsUploading(true);
+      setFormError(null);
       try {
         const uploadFolder = formData.itemType === 'pamphlet' ? 'pamphlets' : 'forms';
         const result = await uploadFileToServer(file, uploadFolder);
         if (result.success && result.url) {
-          const cleanName = file.name.substring(0, file.name.lastIndexOf('.')).replace(/[_-]+/g, ' ').trim();
           setFormData(prev => ({
             ...prev,
             title: prev.title.trim() ? prev.title : cleanName,
             fileUrl: result.url,
-            fileSize: result.sizeFormatted,
+            fileSize: result.sizeFormatted || fileSizeFormatted,
             fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
           }));
           fetchFoldersStats();
           fetchServerFiles();
+          setSaveSuccessMessage(`فایل "${file.name}" با موفقیت بارگذاری شد.`);
+          setTimeout(() => setSaveSuccessMessage(null), 4000);
         } else {
-          alert('خطا در بارگذاری فایل: ' + (result.message || 'نامشخص'));
+          // در صورت بروز خطا در ذخیره، عنوان و فرمت را حفظ و پیام راهنمای شفاف نمایش می‌دهیم
+          setFormData(prev => ({
+            ...prev,
+            title: prev.title.trim() ? prev.title : cleanName,
+            fileSize: fileSizeFormatted,
+            fileFormat: ['PDF', 'DOCX', 'XLSX', 'ZIP', 'PPTX'].includes(ext) ? (ext as any) : 'PDF'
+          }));
+          setFormError(result.message || 'خطا در بارگذاری فایل در سرور. لطفاً آدرس یا لینک فایل را بررسی کنید.');
         }
       } catch (err: any) {
-        alert('خطا در ارتباط با سرور: ' + (err.message || ''));
+        setFormError('خطا در ارتباط با سرور: ' + (err?.message || 'پاسخ نامعتبر'));
       } finally {
         setIsUploading(false);
+        if (e.target) e.target.value = '';
       }
     }
   };
@@ -374,6 +407,7 @@ export default function AdminForms() {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsDirectUploading(true);
+    setFormError(null);
     try {
       const result = await uploadFileToServer(file, targetFolder);
       if (result.success && result.url) {
@@ -382,7 +416,7 @@ export default function AdminForms() {
         fetchFoldersStats();
         fetchServerFiles(targetFolder);
       } else {
-        alert('خطا در بارگذاری مستقیم: ' + (result.message || 'نامشخص'));
+        alert(result.message || 'خطا در بارگذاری مستقیم فایل در سرور');
       }
     } catch (err: any) {
       alert('خطا در ارتباط با سرور: ' + (err?.message || ''));
@@ -670,15 +704,22 @@ export default function AdminForms() {
     const id = formToDelete.id;
     const isPamphlet = formToDelete.itemType === 'pamphlet';
 
-    setForms(prev => prev.filter(item => item !== id));
+    // بروزرسانی فوری استیت محلی جهت حذف بلادرنگ از صفحه بدون نیاز به رفرش
+    setForms(prev => prev.filter(item => item.id !== id));
     setSelectedIds(prev => prev.filter(item => item !== id));
     setFormToDelete(null);
+
+    // حذف بلادرنگ از لوکال استوریج و اطلاع‌رسانی آنی به تمام صفحات و کامپوننت‌ها
+    storage.deleteForm(id);
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     setSaveSuccessMessage(isPamphlet ? 'جزوه آموزشی با موفقیت حذف گردید.' : 'فرم با موفقیت حذف گردید.');
     setTimeout(() => setSaveSuccessMessage(null), 4000);
 
     try {
       await storage.deleteFormFromDB(id);
+      await loadData();
+      fetchFoldersStats();
     } catch (err) {
       console.warn('DB delete single form error:', err);
     }
@@ -690,15 +731,21 @@ export default function AdminForms() {
     setSelectedIds([]);
     setShowBulkDeleteConfirm(false);
 
+    // حذف بلادرنگ تمامی موارد از حافظه محلی و انتشار رویداد
+    idsToDelete.forEach(id => storage.deleteForm(id));
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
+
     setSaveSuccessMessage(`${idsToDelete.length} مورد با موفقیت حذف شدند.`);
     setTimeout(() => setSaveSuccessMessage(null), 4000);
 
-    for (const id of idsToDelete) {
-      try {
+    try {
+      for (const id of idsToDelete) {
         await storage.deleteFormFromDB(id);
-      } catch (err) {
-        console.warn('DB bulk delete item error:', err);
       }
+      await loadData();
+      fetchFoldersStats();
+    } catch (err) {
+      console.warn('DB bulk delete item error:', err);
     }
   };
 
@@ -707,9 +754,12 @@ export default function AdminForms() {
     const updated = storage.getForms();
     setForms(updated);
     setShowResetFormsConfirm(false);
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     try {
       await storage.saveFormsToDB(updated);
+      await loadData();
+      fetchFoldersStats();
     } catch (err) {
       console.warn('DB sync forms error:', err);
     }
@@ -719,9 +769,11 @@ export default function AdminForms() {
     storage.toggleFormPublish(id);
     const updated = storage.getForms();
     setForms(updated);
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     try {
       await storage.saveFormsToDB(updated);
+      await loadData();
     } catch (err) {
       console.warn('DB sync forms error:', err);
     }
@@ -731,9 +783,11 @@ export default function AdminForms() {
     storage.toggleFormPin(id);
     const updated = storage.getForms();
     setForms(updated);
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     try {
       await storage.saveFormsToDB(updated);
+      await loadData();
     } catch (err) {
       console.warn('DB sync forms error:', err);
     }
@@ -764,9 +818,11 @@ export default function AdminForms() {
     const updated = storage.getForms();
     setForms(updated);
     setSelectedIds([]);
+    window.dispatchEvent(new Event('kowsar_forms_changed'));
 
     try {
       await storage.saveFormsToDB(updated);
+      await loadData();
     } catch (err) {
       console.warn('DB sync forms error:', err);
     }
@@ -2856,7 +2912,17 @@ export default function AdminForms() {
                             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                             <span className="truncate">فایل ثبت شد: <span className="font-mono text-emerald-900" dir="ltr">{formData.fileUrl}</span></span>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full shrink-0">{formData.fileSize}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">{formData.fileSize}</span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, fileUrl: '', fileSize: '' }))}
+                              className="p-1 hover:bg-rose-100 rounded-lg text-rose-600 transition-colors"
+                              title="حذف پیوند فایل"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

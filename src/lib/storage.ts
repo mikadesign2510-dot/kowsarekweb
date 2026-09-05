@@ -369,6 +369,7 @@ export interface SystemLog {
   message: string;
   details?: string;
   status: 'unresolved' | 'resolved';
+  isSuperficial?: boolean;
 }
 
 export type SecurityEventType = 'login_success' | 'login_failed' | 'auth_attempt' | 'data_modified' | 'system_alert' | 'permission_denied' | 'account_locked' | 'rate_limited';
@@ -2204,7 +2205,7 @@ export const storage = {
     }
   },
 
-  addLog: (log: Omit<SystemLog, 'id' | 'timestamp' | 'status'>) => {
+  addLog: (log: Omit<SystemLog, 'id' | 'timestamp' | 'status'> & { isSuperficial?: boolean }) => {
     // Ignore transient dynamic chunk import errors caused by client browser caching during deployment
     if (
       log.message?.includes('Failed to fetch dynamically imported module') ||
@@ -2215,30 +2216,145 @@ export const storage = {
       return null as any;
     }
 
+    const isSuperficial = Boolean(
+      log.isSuperficial ||
+      log.level === 'warning' ||
+      log.level === 'info' ||
+      log.source?.includes('Console') ||
+      log.source?.includes('آزمایشی') ||
+      log.message?.includes('آزمایشی') ||
+      log.message?.includes('هشدار')
+    );
+
     const logs = storage.getLogs();
     const newLog: SystemLog = {
       ...log,
       id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 5),
       timestamp: new Date().toLocaleTimeString('fa-IR') + ' - ' + new Date().toLocaleDateString('fa-IR'),
-      status: 'unresolved'
+      status: 'unresolved',
+      isSuperficial
     };
     localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify([newLog, ...logs].slice(0, 500)));
+
+    // Sync asynchronously with PostgreSQL backend
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch('/api/logs/system', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newLog)
+      }).catch(err => {
+        // Benign local console warn to avoid recursion
+      });
+    } catch {}
+
     return newLog;
+  },
+
+  syncSystemLogsWithDB: async (): Promise<SystemLog[]> => {
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch('/api/logs/system', { headers });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const dbLogs: SystemLog[] = json.data;
+          const localLogs = storage.getLogs();
+          
+          // Merge by ID
+          const map = new Map<string, SystemLog>();
+          for (const l of dbLogs) map.set(l.id, l);
+          for (const l of localLogs) {
+            if (!map.has(l.id)) map.set(l.id, l);
+          }
+          const merged = Array.from(map.values()).slice(0, 500);
+          localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(merged));
+          return merged;
+        }
+      }
+    } catch (e) {
+      // Offline or network error, return local logs
+    }
+    return storage.getLogs();
   },
 
   deleteLog: (id: string) => {
     const logs = storage.getLogs();
     const updated = logs.filter(l => l.id !== id);
     localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(updated));
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch(`/api/logs/system/${id}`, { method: 'DELETE', headers }).catch(() => {});
+    } catch {}
   },
 
   updateLogStatus: (id: string, status: 'unresolved' | 'resolved') => {
     const logs = storage.getLogs();
     localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(logs.map(l => l.id === id ? { ...l, status } : l)));
+    if (status === 'resolved') {
+      try {
+        const headers = getAdminAuthHeaders();
+        fetch(`/api/logs/system/${id}/resolve`, { method: 'PUT', headers }).catch(() => {});
+      } catch {}
+    }
+  },
+
+  resolveAllLogs: async () => {
+    const logs = storage.getLogs();
+    const updated = logs.map(l => ({ ...l, status: 'resolved' as const }));
+    localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(updated));
+    try {
+      const headers = getAdminAuthHeaders();
+      await fetch('/api/logs/system/resolve-all', { method: 'PUT', headers });
+    } catch {}
+  },
+
+  cleanSuperficialLogs: async () => {
+    const logs = storage.getLogs();
+    // Resolve all superficial or warning logs
+    const updated = logs.map(l => {
+      if (
+        l.isSuperficial ||
+        l.level === 'warning' ||
+        l.level === 'info' ||
+        l.source?.includes('Console') ||
+        l.source?.includes('آزمایشی') ||
+        l.message?.includes('آزمایشی')
+      ) {
+        return { ...l, status: 'resolved' as const };
+      }
+      return l;
+    });
+    localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(updated));
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch('/api/logs/system/clean-superficial', { method: 'PUT', headers });
+      if (res.ok) {
+        const json = await res.json();
+        return json.resolvedCount || 0;
+      }
+    } catch {}
+    return 0;
   },
 
   clearLogs: () => {
     localStorage.removeItem(SYSTEM_LOGS_KEY);
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch('/api/logs/system/clear-all', { method: 'DELETE', headers }).catch(() => {});
+    } catch {}
+  },
+
+  fetchBackendHealth: async () => {
+    try {
+      const headers = getAdminAuthHeaders();
+      const res = await fetch('/api/logs/health', { headers });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) return json.data;
+      }
+    } catch {}
+    return null;
   },
 
   getUnresolvedErrorsCount: (): number => {
@@ -2444,6 +2560,29 @@ export const storage = {
       if (storage.getForms().length === 0) {
         storage.saveForms(defaultForms);
         fixedItems.push('بازسازی فرم‌های ضروری');
+      }
+      // Auto-resolve superficial and test logs
+      const logs = storage.getLogs();
+      let superficialResolved = 0;
+      const updatedLogs = logs.map(l => {
+        if (
+          l.status === 'unresolved' &&
+          (l.isSuperficial ||
+            l.level === 'warning' ||
+            l.level === 'info' ||
+            l.source?.includes('Console') ||
+            l.source?.includes('آزمایشی') ||
+            l.message?.includes('آزمایشی'))
+        ) {
+          superficialResolved++;
+          return { ...l, status: 'resolved' as const };
+        }
+        return l;
+      });
+      if (superficialResolved > 0) {
+        localStorage.setItem(SYSTEM_LOGS_KEY, JSON.stringify(updatedLogs));
+        fixedItems.push(`بررسی و رفع خودکار ${superficialResolved} هشدار و پیام سطحی/آزمایشی`);
+        storage.cleanSuperficialLogs().catch(() => {});
       }
     } catch (e) {
       console.warn('Auto repair encountered error:', e);

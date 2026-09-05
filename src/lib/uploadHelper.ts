@@ -117,8 +117,28 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
       body: formData
     });
 
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.url) {
+    let data: any = null;
+    let responseText = '';
+    try {
+      responseText = await response.text();
+      data = JSON.parse(responseText);
+    } catch {
+      // سرور به جای JSON، صفحه HTML یا پاسخ متنی بازگردانده است (مثلاً خطای 413 وب‌سرور یا پروکسی)
+      console.warn('Non-JSON response received from upload endpoint:', response.status, responseText.substring(0, 200));
+      if (response.status === 413) {
+        throw new Error(`حجم فایل انتخابی (${originalSizeMB} مگابایت) بیشتر از سقف مجاز تعریف‌شده در وب‌سرور (Nginx) است (خطای 413). برای فایل‌های حجیم، می‌توانید فایل را از بخش دایرکتوری سرور انتخاب کنید یا حجم آن را فشرده فرمایید.`);
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error(`دسترسی غیرمجاز یا نشست کاربری منقضی شده است (کد خطا: ${response.status}). لطفاً یک بار از پنل خارج و مجدداً وارد شوید.`);
+      } else if (response.status === 502 || response.status === 504) {
+        throw new Error(`پاسخگویی وب‌سرور با وقفه مواجه شد (کد خطا: ${response.status}). لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.`);
+      } else if (response.status === 404) {
+        throw new Error(`مسیر سرویس آپلود روی سرور یافت نشد (کد خطا: 404). لطفاً از فعال بودن سرویس بک‌اند اطمینان حاصل فرمایید.`);
+      } else {
+        throw new Error(`پاسخ وب‌سرور نامعتبر بود (کد وضعیت: ${response.status}).`);
+      }
+    }
+
+    if (response.ok && data?.success && data?.data?.url) {
       return {
         success: true,
         url: data.data.url,
@@ -128,7 +148,7 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
         message: data.message || 'فایل با موفقیت روی سرور ذخیره شد'
       };
     }
-    throw new Error(data.message || `خطا در آپلود فایل روی سرور (کد خطا: ${response.status})`);
+    throw new Error(data?.message || `خطا در آپلود فایل روی سرور (کد خطا: ${response.status})`);
   } catch (error: any) {
     console.error('Direct server upload error:', error);
     
@@ -198,8 +218,15 @@ export async function uploadMultipleFilesToServer(files: File[], folder: string 
       body: formData
     });
 
-    const data = await response.json();
-    if (response.ok && data.success && Array.isArray(data.data)) {
+    let data: any = null;
+    try {
+      const responseText = await response.text();
+      data = JSON.parse(responseText);
+    } catch {
+      console.warn('Non-JSON response in uploadMultipleFilesToServer:', response.status);
+    }
+
+    if (response.ok && data?.success && Array.isArray(data?.data)) {
       return {
         success: true,
         items: data.data.map((item: any) => ({
@@ -210,7 +237,7 @@ export async function uploadMultipleFilesToServer(files: File[], folder: string 
         message: `${data.data.length} تصویر با موفقیت در پوشه ${folder} آپلود شد`
       };
     }
-    throw new Error(data.message || 'خطا در ارسال گروهی به سرور');
+    throw new Error(data?.message || 'خطا در ارسال گروهی به سرور');
   } catch (error: any) {
     console.warn('Multiple upload fallback to single item processing:', error);
     

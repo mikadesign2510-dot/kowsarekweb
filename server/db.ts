@@ -179,6 +179,19 @@ export async function initializeDatabase() {
         details JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id VARCHAR(64) PRIMARY KEY,
+        level VARCHAR(30) NOT NULL DEFAULT 'error',
+        source VARCHAR(150) NOT NULL,
+        message TEXT NOT NULL,
+        details TEXT,
+        status VARCHAR(30) NOT NULL DEFAULT 'unresolved',
+        is_superficial BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      ALTER TABLE system_logs ADD COLUMN IF NOT EXISTS is_superficial BOOLEAN DEFAULT FALSE;
     `);
 
     // ۸. جدول بخش‌های معرفی مرکز

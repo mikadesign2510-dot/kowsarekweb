@@ -1,5 +1,50 @@
 import { storage } from './storage';
 
+// Keep track of recent error signatures to prevent flooding
+const recentErrorSignatures = new Map<string, number>();
+
+function shouldIgnoreMessage(msg: string): boolean {
+  if (!msg) return true;
+  const lower = msg.toLowerCase();
+  
+  return (
+    lower.includes('failed to fetch dynamically imported module') ||
+    lower.includes('dynamically imported module') ||
+    lower.includes('error loading dynamically imported module') ||
+    lower.includes('failed to connect to websocket') ||
+    lower.includes('[vite] failed to connect to websocket') ||
+    lower.includes('vite:preloaderror') ||
+    lower.includes('resizeobserver loop limit exceeded') ||
+    lower.includes('aborterror') ||
+    lower.includes('the user aborted a request') ||
+    lower.includes('user aborted a request') ||
+    lower.includes('warning:') ||
+    lower.includes('non-error promise rejection captured') ||
+    lower.includes('chrome-extension://') ||
+    lower.includes('moz-extension://') ||
+    lower.includes('safari-extension://') ||
+    lower.includes('notallowederror: play() failed') ||
+    lower.includes('download the react devtools')
+  );
+}
+
+function isDuplicateFlood(signature: string): boolean {
+  const now = Date.now();
+  const lastTime = recentErrorSignatures.get(signature) || 0;
+  if (now - lastTime < 10000) {
+    // Suppress duplicates within 10 seconds
+    return true;
+  }
+  recentErrorSignatures.set(signature, now);
+  // Keep cache small
+  if (recentErrorSignatures.size > 100) {
+    for (const [k, t] of recentErrorSignatures.entries()) {
+      if (now - t > 30000) recentErrorSignatures.delete(k);
+    }
+  }
+  return false;
+}
+
 export const initErrorLogger = () => {
   if (typeof window === 'undefined') return;
 
@@ -22,7 +67,8 @@ export const initErrorLogger = () => {
 
   // Capture unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
-    const msg = event.reason?.message || '';
+    const msg = event.reason?.message || (typeof event.reason === 'string' ? event.reason : '');
+    
     if (
       msg.includes('Failed to fetch dynamically imported module') ||
       msg.includes('dynamically imported module') ||
@@ -33,64 +79,62 @@ export const initErrorLogger = () => {
       return;
     }
 
+    if (shouldIgnoreMessage(msg)) return;
+    if (isDuplicateFlood(msg)) return;
+
     storage.addLog({
       level: 'error',
       source: 'Unhandled Promise Rejection',
-      message: event.reason?.message || 'خطای ناشناخته در Promise',
-      details: event.reason?.stack || JSON.stringify(event.reason)
+      message: msg || 'خطای ناهمگام در کلاینت (Promise Rejection)',
+      details: event.reason?.stack || JSON.stringify(event.reason),
+      isSuperficial: msg.includes('NetworkError') || msg.includes('Failed to fetch')
     });
   });
 
   // Capture global window errors
   window.addEventListener('error', (event) => {
-    // Ignore ResizeObserver loop limit exceeded error which is benign in most cases
-    if (event.message === 'ResizeObserver loop limit exceeded') return;
+    const msg = event.message || '';
+    if (shouldIgnoreMessage(msg)) return;
 
     if (
-      event.message?.includes('Failed to fetch dynamically imported module') ||
-      event.message?.includes('dynamically imported module') ||
-      event.message?.includes('error loading dynamically imported module')
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('error loading dynamically imported module')
     ) {
       handleChunkLoadFailure();
       return;
     }
+
+    if (isDuplicateFlood(`${msg}-${event.filename}-${event.lineno}`)) return;
 
     storage.addLog({
       level: 'error',
       source: 'Global Window Error',
-      message: event.message || 'خطای ناشناخته در اجرا',
-      details: event.error?.stack || `${event.filename}:${event.lineno}:${event.colno}`
+      message: msg || 'خطای ناشناخته در اجرا',
+      details: event.error?.stack || `${event.filename}:${event.lineno}:${event.colno}`,
+      isSuperficial: false
     });
   });
 
-  // Override console.error to also log to our system
+  // Override console.error with strict filtering
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
-    // Call the original first
+    // Call original first
     originalConsoleError.apply(console, args);
 
-    // Skip React warning logs if needed, or just log everything
     const message = args.map(arg => 
       typeof arg === 'object' ? (arg instanceof Error ? arg.message : JSON.stringify(arg)) : String(arg)
     ).join(' ');
 
-    if (
-      message.includes('Failed to fetch dynamically imported module') ||
-      message.includes('dynamically imported module') ||
-      message.includes('error loading dynamically imported module')
-    ) {
-      handleChunkLoadFailure();
-      return;
-    }
-
-    // Filter out some noisy React internal errors if you want, but for now we log them
-    if (message.includes('Warning:')) return;
+    if (shouldIgnoreMessage(message)) return;
+    if (isDuplicateFlood(message)) return;
 
     storage.addLog({
       level: 'warning',
-      source: 'Console Error',
-      message: message.substring(0, 200), // truncate if too long
-      details: args.map(a => typeof a === 'object' && a instanceof Error ? a.stack : '').filter(Boolean).join('\n')
+      source: 'Console Warning',
+      message: message.substring(0, 200),
+      details: args.map(a => typeof a === 'object' && a instanceof Error ? a.stack : '').filter(Boolean).join('\n'),
+      isSuperficial: true
     });
   };
 };

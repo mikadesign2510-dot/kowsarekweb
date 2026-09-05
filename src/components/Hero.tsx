@@ -322,7 +322,7 @@ export default function Hero() {
 
                 {/* Slider Dots */}
                 {banners.length > 1 && (
-                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 z-20 flex justify-center gap-1.5 sm:gap-2 opacity-90 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 z-20 flex justify-center gap-1.5 sm:gap-2 max-w-[90%] mx-auto flex-wrap px-4 opacity-90 group-hover:opacity-100 transition-opacity duration-300">
                     {banners.map((banner, idx) => (
                       <button
                         key={banner.id || idx}

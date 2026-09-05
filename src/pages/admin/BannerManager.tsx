@@ -43,6 +43,36 @@ const PRESET_IMAGES = [
     url: 'https://picsum.photos/seed/7635/1200/800',
     title: 'کتابخانه و فضای پژوهش',
     tag: 'کتابخانه'
+  },
+  {
+    url: 'https://picsum.photos/seed/7640/1200/800',
+    title: 'آزمایشگاه تخصصی و پژوهشی',
+    tag: 'آزمایشگاه'
+  },
+  {
+    url: 'https://picsum.photos/seed/7655/1200/800',
+    title: 'سایت کامپیوتر و فناوری اطلاعات',
+    tag: 'فناوری و شبکه'
+  },
+  {
+    url: 'https://picsum.photos/seed/7670/1200/800',
+    title: 'سمینارها و رویدادهای علمی دانشگاه',
+    tag: 'رویداد و همایش'
+  },
+  {
+    url: 'https://picsum.photos/seed/7685/1200/800',
+    title: 'پذیرش دانشجو و ثبت‌نام مقاطع تحصیلی',
+    tag: 'پذیرش دانشجو'
+  },
+  {
+    url: 'https://picsum.photos/seed/7692/1200/800',
+    title: 'ورزش و تربیت بدنی دانشجویی',
+    tag: 'ورزش و نشاط'
+  },
+  {
+    url: 'https://picsum.photos/seed/7710/1200/800',
+    title: 'جلسات هیات علمی و آموزشی',
+    tag: 'آموزش عالی'
   }
 ];
 
@@ -62,6 +92,7 @@ export default function BannerManager() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [imageInputMode, setImageInputMode] = useState<'upload' | 'url' | 'presets'>('upload');
   const [isUploading, setIsUploading] = useState(false);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [cropperModal, setCropperModal] = useState<{
     isOpen: boolean;
     imageSrc: string | File | null;
@@ -92,7 +123,29 @@ export default function BannerManager() {
 
   useEffect(() => {
     loadBanners();
+
+    // به‌روزرسانی خودکار و بلادرنگ بدون نیاز به رفرش صفحه
+    const handleBannersChanged = (e: any) => {
+      const updated = e.detail || storage.getBanners();
+      setBanners(updated);
+    };
+
+    window.addEventListener('kowsar_banners_changed', handleBannersChanged);
+    window.addEventListener('storage', handleBannersChanged);
+
+    return () => {
+      window.removeEventListener('kowsar_banners_changed', handleBannersChanged);
+      window.removeEventListener('storage', handleBannersChanged);
+    };
   }, []);
+
+  // پاک کردن خودکار پیام موفقیت پس از ۴ ثانیه
+  useEffect(() => {
+    if (saveSuccessMessage) {
+      const timer = setTimeout(() => setSaveSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveSuccessMessage]);
 
   // Open modal for new banner
   const handleOpenNew = () => {
@@ -179,9 +232,11 @@ export default function BannerManager() {
         ...formData
       });
       updatedBanners = storage.getBanners();
+      setSaveSuccessMessage('اسلاید بنر با موفقیت ویرایش و ذخیره شد.');
     } else {
       storage.addBanner(formData);
       updatedBanners = storage.getBanners();
+      setSaveSuccessMessage(`اسلاید جدید (اسلاید شماره ${updatedBanners.length}) با موفقیت اضافه شد.`);
     }
 
     // Optimistic UI update
@@ -204,6 +259,7 @@ export default function BannerManager() {
     storage.deleteBanner(bannerId);
     const updated = storage.getBanners();
     setBanners(updated);
+    setSaveSuccessMessage('اسلاید با موفقیت حذف شد.');
     try {
       await storage.saveBannersToDB(updated);
     } catch (err) {
@@ -216,6 +272,7 @@ export default function BannerManager() {
     storage.moveBannerOrder(id, direction);
     const updated = storage.getBanners();
     setBanners(updated);
+    setSaveSuccessMessage('اولویت نمایش اسلایدها با موفقیت تغییر یافت.');
     try {
       await storage.saveBannersToDB(updated);
     } catch (err) {
@@ -228,6 +285,7 @@ export default function BannerManager() {
     storage.toggleBannerStatus(id);
     const updated = storage.getBanners();
     setBanners(updated);
+    setSaveSuccessMessage('وضعیت نمایش اسلاید با موفقیت تغییر کرد.');
     try {
       await storage.saveBannersToDB(updated);
     } catch (err) {
@@ -242,6 +300,7 @@ export default function BannerManager() {
     storage.updateBanner(updatedBanner);
     const updated = storage.getBanners();
     setBanners(updated);
+    setSaveSuccessMessage(nextShowButton ? 'دکمه اقدام اسلاید فعال شد.' : 'دکمه اقدام اسلاید غیرفعال شد.');
     try {
       await storage.saveBannersToDB(updated);
     } catch (err) {
@@ -255,6 +314,7 @@ export default function BannerManager() {
     storage.resetBannersToDefault();
     const updated = storage.getBanners();
     setBanners(updated);
+    setSaveSuccessMessage('تصاویر اسلایدر به حالت پیش‌فرض بازنشانی شد.');
     try {
       await storage.saveBannersToDB(updated);
     } catch (err) {
@@ -277,6 +337,29 @@ export default function BannerManager() {
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Toast Alert Message */}
+      <AnimatePresence>
+        {saveSuccessMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.98 }}
+            className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center justify-between gap-3 shadow-sm"
+          >
+            <div className="flex items-center gap-2.5 font-bold text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>{saveSuccessMessage}</span>
+            </div>
+            <button
+              onClick={() => setSaveSuccessMessage(null)}
+              className="text-emerald-600 hover:text-emerald-800 p-1 rounded-lg hover:bg-emerald-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -287,7 +370,7 @@ export default function BannerManager() {
             مدیریت تصاویر و بنر اسلایدر اصلی
           </h1>
           <p className="text-slate-500 font-medium text-sm mt-1">
-            تصاویر بنر صفحه اول سایت را ویرایش، اولویت‌بندی، فعال/غیرفعال یا جایگزین کنید.
+            تصاویر بنر صفحه اول سایت را ویرایش، اولویت‌بندی، فعال/غیرفعال یا جایگزین کنید. (ظرفیت اسلایدها نامحدود است)
           </p>
         </div>
 
@@ -313,7 +396,7 @@ export default function BannerManager() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs font-bold text-slate-400 mb-1">تعداد کل اسلایدها</div>
@@ -341,6 +424,16 @@ export default function BannerManager() {
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <EyeOff className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold text-slate-400 mb-1">ظرفیت اسلایدها</div>
+            <div className="text-xl font-black text-indigo-600">نامحدود <span className="text-xs font-normal text-slate-400">بدون سقف</span></div>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Sparkles className="w-6 h-6" />
           </div>
         </div>
       </div>

@@ -24,6 +24,8 @@ router.post('/sync', async (req: Request, res: Response) => {
     }
 
     await client.query('BEGIN');
+    // استفاده از قفل مشورتی برای جلوگیری از تداخل تراکنش‌های همزمان
+    await client.query('SELECT pg_advisory_xact_lock(74219)');
     await client.query('DELETE FROM banners');
 
     for (let i = 0; i < banners.length; i++) {
