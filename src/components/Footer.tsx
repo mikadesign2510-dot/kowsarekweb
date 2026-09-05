@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { storage } from '../lib/storage';
-import { Library, MapPin, Phone, Mail, Instagram, Send } from 'lucide-react';
+import { Library, MapPin, Phone, Mail, Instagram, Send, Navigation, Compass } from 'lucide-react';
 
 const toPersianDigits = (num: number | string | undefined | null): string => {
   if (num === undefined || num === null) return '';
@@ -110,39 +110,54 @@ export default function Footer() {
                 </div>
               </div>
               
-              <div className="h-40 rounded-xl overflow-hidden border border-blue-800 shadow-inner group relative">
-                <iframe 
-                  src="https://balad.ir/iframe?center=28.328325%2C51.524456&zoom=14.3" 
-                  title="نقشه مسیر مرکز کوثر کاکی" 
-                  width="100%" 
-                  height="100%" 
-                  frameBorder="0" 
-                  className="grayscale-[0.5] contrast-125 opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
-                  style={{ border: 0 }} 
-                  allowFullScreen 
-                  aria-hidden="false" 
-                  tabIndex={0}
-                ></iframe>
-                <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+              <div className="rounded-xl overflow-hidden border border-blue-800 bg-blue-900/40 p-3.5 space-y-2.5">
+                <div className="flex items-center text-xs">
+                  <span className="font-bold text-blue-200 flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-blue-400" />
+                    مسیریابی سریع با نرم‌افزارها:
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
                   <a 
-                    href="https://maps.app.goo.gl/pH9PehuwXuWNXwcL8" 
+                    href="https://www.google.com/maps/dir/?api=1&destination=28.34291274764676,51.52670733886608" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-md transition-colors backdrop-blur-sm flex items-center gap-1"
+                    className="bg-red-600/90 hover:bg-red-500 text-white text-[11px] font-bold px-2.5 py-2 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5"
                     title="مسیریابی با گوگل مپ"
                   >
-                    <MapPin className="w-3 h-3" />
+                    <MapPin className="w-3.5 h-3.5" />
                     گوگل مپ
                   </a>
                   <a 
-                    href="https://balad.ir/p/4v91Y4n1eN6hN0" 
+                    href="https://nshn.ir/search/28.342913,51.526707" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-blue-600/90 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-md hover:bg-blue-500 transition-colors backdrop-blur-sm flex items-center gap-1"
+                    className="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-2 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5"
+                    title="مسیریابی با نشان"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    نشان
+                  </a>
+                  <a 
+                    href="https://balad.ir/location?latitude=28.342913&longitude=51.526707" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-blue-600/90 hover:bg-blue-500 text-white text-[11px] font-bold px-2.5 py-2 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5"
                     title="مسیریابی در بلد"
                   >
-                    <MapPin className="w-3 h-3" />
+                    <Compass className="w-3.5 h-3.5" />
                     بلد
+                  </a>
+                  <a 
+                    href="https://waze.com/ul?ll=28.34291274764676,51.52670733886608&navigate=yes" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-sky-600/90 hover:bg-sky-500 text-white text-[11px] font-bold px-2.5 py-2 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5"
+                    title="مسیریابی با ویز"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    ویز (Waze)
                   </a>
                 </div>
               </div>

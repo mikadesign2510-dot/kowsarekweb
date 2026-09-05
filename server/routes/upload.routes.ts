@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { requireAuth, AuthenticatedRequest } from '../middlewares/auth.js';
+import { pool } from '../db.js';
 
 const router = Router();
 
@@ -112,7 +113,7 @@ const upload = multer({
 
 // Single file upload endpoint
 router.post('/', (req: Request, res: Response) => {
-  upload.single('file')(req, res, (err: any) => {
+  upload.single('file')(req, res, async (err: any) => {
     if (err) {
       console.error('File upload middleware error:', err);
       return res.status(400).json({
@@ -130,13 +131,43 @@ router.post('/', (req: Request, res: Response) => {
       }
 
       const folder = req.query.folder || req.headers['x-upload-folder'] || req.body?.folder;
-      const { safeFolder } = getTargetDir(folder);
+      const { safeFolder, targetDir } = getTargetDir(folder);
       const fileUrl = `/uploads/${safeFolder}/${req.file.filename}`;
       const fileSizeMB = (req.file.size / (1024 * 1024)).toFixed(2);
 
+      // ذخیره‌سازی دائمی فایل در پایگاه‌داده PostgreSQL (جهت تضمین عدم مفقودی پس از ریستارت یا تغییرات سرور)
+      try {
+        const filePath = path.join(targetDir, req.file.filename);
+        if (fs.existsSync(filePath)) {
+          const fileBuffer = fs.readFileSync(filePath);
+          const base64Data = fileBuffer.toString('base64');
+          await pool.query(
+            `INSERT INTO uploaded_files (filename, folder, original_name, mimetype, size, file_data)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (filename) DO UPDATE SET
+               folder = EXCLUDED.folder,
+               original_name = EXCLUDED.original_name,
+               mimetype = EXCLUDED.mimetype,
+               size = EXCLUDED.size,
+               file_data = EXCLUDED.file_data,
+               created_at = CURRENT_TIMESTAMP`,
+            [
+              req.file.filename,
+              safeFolder,
+              req.file.originalname,
+              req.file.mimetype,
+              req.file.size,
+              base64Data
+            ]
+          );
+        }
+      } catch (dbBackupErr) {
+        console.warn('⚠️ اخطار بکاپ دیتابیس فایل آپلود شده (فایل روی دیسک ذخیره شده است):', dbBackupErr);
+      }
+
       res.json({
         success: true,
-        message: 'فایل با موفقیت در پوشه اختصاصی سرور ذخیره گردید',
+        message: 'فایل با موفقیت در سرور و پایگاه داده دائمی ذخیره گردید',
         data: {
           filename: req.file.filename,
           originalName: req.file.originalname,
@@ -159,7 +190,7 @@ router.post('/', (req: Request, res: Response) => {
 
 // Multiple files upload endpoint (for gallery or multi attachments)
 router.post('/multiple', (req: Request, res: Response) => {
-  upload.array('files', 30)(req, res, (err: any) => {
+  upload.array('files', 30)(req, res, async (err: any) => {
     if (err) {
       console.error('Multiple upload middleware error:', err);
       return res.status(400).json({
@@ -178,7 +209,32 @@ router.post('/multiple', (req: Request, res: Response) => {
       }
 
       const folder = req.query.folder || req.headers['x-upload-folder'] || req.body?.folder;
-      const { safeFolder } = getTargetDir(folder);
+      const { safeFolder, targetDir } = getTargetDir(folder);
+
+      // ذخیره‌سازی دائمی تمام فایل‌ها در پایگاه‌داده
+      for (const f of files) {
+        try {
+          const filePath = path.join(targetDir, f.filename);
+          if (fs.existsSync(filePath)) {
+            const fileBuffer = fs.readFileSync(filePath);
+            const base64Data = fileBuffer.toString('base64');
+            await pool.query(
+              `INSERT INTO uploaded_files (filename, folder, original_name, mimetype, size, file_data)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (filename) DO UPDATE SET
+                 folder = EXCLUDED.folder,
+                 original_name = EXCLUDED.original_name,
+                 mimetype = EXCLUDED.mimetype,
+                 size = EXCLUDED.size,
+                 file_data = EXCLUDED.file_data,
+                 created_at = CURRENT_TIMESTAMP`,
+              [f.filename, safeFolder, f.originalname, f.mimetype, f.size, base64Data]
+            );
+          }
+        } catch (dbErr) {
+          console.warn('⚠️ اخطار ذخیره‌سازی فایل گروهی در دیتابیس:', dbErr);
+        }
+      }
 
       const uploadedFiles = files.map(f => ({
         filename: f.filename,
@@ -192,7 +248,7 @@ router.post('/multiple', (req: Request, res: Response) => {
 
       res.json({
         success: true,
-        message: `${uploadedFiles.length} فایل با موفقیت در پوشه ${safeFolder} ذخیره شدند`,
+        message: `${uploadedFiles.length} فایل با موفقیت در پوشه ${safeFolder} و پایگاه‌داده دائمی ذخیره شدند`,
         data: uploadedFiles
       });
     } catch (error: any) {

@@ -146,6 +146,7 @@ export interface SiteSettings {
   newsBadge?: string;
   newsTitle?: string;
   newsCarouselStyle?: 'default' | 'glass' | 'minimal';
+  newsCarouselSize?: 'compact' | 'standard' | 'large' | 'xlarge' | 'cinematic';
   newsCarouselCount?: number;
   newsCarouselArrowSpacing?: 'tight' | 'normal' | 'wide' | 'extra';
   pinnedNewsSliderConfig?: PinnedNewsSliderConfig;
@@ -1089,7 +1090,7 @@ export const defaultContactConfig: ContactPageConfig = {
   longitude: 51.526707,
   neshanLink: 'https://nshn.ir/search/28.342913,51.526707',
   baladLink: 'https://balad.ir/location?latitude=28.342913&longitude=51.526707',
-  googleMapsLink: 'https://www.google.com/maps?q=28.34291274764676,51.52670733886608',
+  googleMapsLink: 'https://www.google.com/maps/dir/?api=1&destination=28.34291274764676,51.52670733886608',
   wazeLink: 'https://waze.com/ul?ll=28.342913,51.526707&navigate=yes',
   mapIframe: '<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=28.342913%2C51.526707" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>',
   phoneMain: '۰۷۷-۳۵۳۲۰۰۰۰',
@@ -1347,17 +1348,15 @@ export const storage = {
       window.dispatchEvent(new Event('kowsar_site_settings_changed'));
     }
     
-    // ذخیره در سرور
-    const token = localStorage.getItem('kowsar_jwt_token');
-    if (token) {
+    // ذخیره دائمی و همگام‌سازی مستقیم با سرور و دیتابیس PostgreSQL
+    try {
       fetch('/api/settings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify(newSettings)
       }).catch(e => console.warn('Could not save settings to DB:', e));
+    } catch (e) {
+      console.warn('Network error saving settings:', e);
     }
   },
 
@@ -1391,17 +1390,15 @@ export const storage = {
       window.dispatchEvent(new Event('kowsar_portal_settings_changed'));
     }
     
-    // ذخیره در سرور
-    const token = localStorage.getItem('kowsar_jwt_token');
-    if (token) {
+    // ذخیره دائمی و همگام‌سازی مستقیم تنظیمات پرتال در سرور
+    try {
       fetch('/api/settings/portal', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify(newSettings)
       }).catch(e => console.warn('Could not save portal settings to DB:', e));
+    } catch (e) {
+      console.warn('Network error saving portal settings:', e);
     }
   },
 

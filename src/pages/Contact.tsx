@@ -455,101 +455,167 @@ export default function Contact() {
           {/* Column 2: Location, Navigation Suite & Direct Details */}
           <div className={`${config.showContactForm ? 'lg:col-span-6' : 'lg:col-span-12'} space-y-6`}>
             
-            {/* Map Card */}
+            {/* 4 Navigation App Boxes Card */}
             {config.showMap && (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                className="bg-white rounded-3xl p-3 shadow-sm border border-slate-200/80 overflow-hidden relative"
+                className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200/80 space-y-5"
               >
-                <div className="w-full h-72 sm:h-80 rounded-2xl overflow-hidden relative bg-slate-100 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">
-                  {config.mapIframe ? (
-                    <div 
-                      className="w-full h-full"
-                      dangerouslySetInnerHTML={{ 
-                        __html: (config.mapIframe.includes('maps.google.com/maps?q=') || config.mapIframe.includes('2zS2FraSwgQnVzaGVociBQcm92aW5jZSwgSXJhbg'))
-                          ? `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=${config.latitude || 28.342913}%2C${config.longitude || 51.526707}" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`
-                          : config.mapIframe 
-                      }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                      نقشه موقعیت مکانی
-                    </div>
-                  )}
-
-                  {/* Floating map badge */}
-                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm text-xs font-bold text-slate-800 flex items-center gap-1.5 border border-slate-100 pointer-events-none z-10">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                    <span>موقعیت مکانی مجتمع دانشگاهی</span>
+                {/* Header */}
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <Compass className="w-6 h-6" />
                   </div>
-
-                  {/* Open in Google Maps link */}
-                  <a
-                    href={config.googleMapsLink || `https://www.google.com/maps?q=${config.latitude || 28.342913},${config.longitude || 51.526707}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute top-3 left-3 bg-white/95 hover:bg-white backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm text-xs font-bold text-slate-700 hover:text-blue-600 flex items-center gap-1.5 border border-slate-100 transition z-10"
-                  >
-                    <span>باز کردن در گوگل‌مپ</span>
-                    <ExternalLink className="w-3 h-3 text-slate-400" />
-                  </a>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+                      <span>مسیریابی هوشمند تا مجتمع دانشگاهی</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 font-light mt-0.5">
+                      روی هر نرم‌افزار بزنید تا برنامه باز شده و مسیر مستقیم تا دانشگاه آغاز شود:
+                    </p>
+                  </div>
                 </div>
 
-                {/* 1-Click Navigation Apps Bar */}
-                {config.showRoutingButtons && (
-                  <div className="p-3 pt-4 border-t border-slate-100 mt-1">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Compass className="w-4 h-4 text-blue-600" />
-                        مسیریابی سریع با اپلیکیشن‌های نقشه:
+                {/* The 4 Navigation App Boxes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* 1. Google Maps */}
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${config.latitude || 28.342913},${config.longitude || 51.526707}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group p-4 rounded-2xl bg-gradient-to-br from-red-50/70 via-rose-50/40 to-white hover:from-red-100/80 hover:to-rose-50 border border-red-200/80 hover:border-red-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-500/25 group-hover:scale-105 transition-transform shrink-0">
+                          <MapPin className="w-5 h-5 fill-white text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-black text-slate-900 group-hover:text-red-700 transition-colors">
+                            گوگل‌مپ (Google Maps)
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            مسیریابی بین‌المللی با نقشه گوگل
+                          </div>
+                        </div>
+                      </div>
+                      <span className="p-1 rounded-lg bg-red-100/80 text-red-700 group-hover:bg-red-600 group-hover:text-white transition-colors shrink-0">
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <a
-                        href={config.neshanLink || `https://nshn.ir/search/${config.latitude},${config.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-200/70 transition"
-                      >
-                        <Navigation className="w-3.5 h-3.5" />
-                        نشان
-                      </a>
-
-                      <a
-                        href={config.baladLink || `https://balad.ir/location?latitude=${config.latitude}&longitude=${config.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-blue-200/70 transition"
-                      >
-                        <Navigation className="w-3.5 h-3.5" />
-                        بلد
-                      </a>
-
-                      <a
-                        href={config.googleMapsLink || 'https://maps.app.goo.gl/pH9PehuwXuWNXwcL8'}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 bg-red-50 hover:bg-red-100 text-red-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-red-200/70 transition"
-                      >
-                        <Navigation className="w-3.5 h-3.5" />
-                        گوگل مپ
-                      </a>
-
-                      <a
-                        href={config.wazeLink || `https://waze.com/ul?ll=${config.latitude},${config.longitude}&navigate=yes`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-purple-200/70 transition"
-                      >
-                        <Navigation className="w-3.5 h-3.5" />
-                        ویز (Waze)
-                      </a>
+                    <div className="pt-2 border-t border-red-100/70 flex items-center justify-between text-xs font-bold text-red-700">
+                      <span>باز کردن و شروع مسیریابی</span>
+                      <Navigation className="w-3.5 h-3.5 transform -rotate-45 group-hover:translate-x-[-3px] transition-transform" />
                     </div>
-                  </div>
-                )}
+                  </a>
+
+                  {/* 2. نشان (Neshan) */}
+                  <a
+                    href={config.neshanLink || `https://nshn.ir/search/${config.latitude || 28.342913},${config.longitude || 51.526707}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-white hover:from-emerald-100/80 hover:to-teal-50 border border-emerald-200/80 hover:border-emerald-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform shrink-0">
+                          <Navigation className="w-5 h-5 fill-white text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                            مسیریاب نشان (Neshan)
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            نقشه و مسیریاب هوشمند سخنگو
+                          </div>
+                        </div>
+                      </div>
+                      <span className="p-1 rounded-lg bg-emerald-100/80 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-emerald-100/70 flex items-center justify-between text-xs font-bold text-emerald-700">
+                      <span>باز کردن و شروع مسیریابی</span>
+                      <Navigation className="w-3.5 h-3.5 transform -rotate-45 group-hover:translate-x-[-3px] transition-transform" />
+                    </div>
+                  </a>
+
+                  {/* 3. بلد (Balad) */}
+                  <a
+                    href={config.baladLink || `https://balad.ir/location?latitude=${config.latitude || 28.342913}&longitude=${config.longitude || 51.526707}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group p-4 rounded-2xl bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-white hover:from-blue-100/80 hover:to-indigo-50 border border-blue-200/80 hover:border-blue-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform shrink-0">
+                          <Compass className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-black text-slate-900 group-hover:text-blue-700 transition-colors">
+                            مسیریاب بلد (Balad)
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            نقشه جامع و تخمین دقیق زمان
+                          </div>
+                        </div>
+                      </div>
+                      <span className="p-1 rounded-lg bg-blue-100/80 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-blue-100/70 flex items-center justify-between text-xs font-bold text-blue-700">
+                      <span>باز کردن و شروع مسیریابی</span>
+                      <Navigation className="w-3.5 h-3.5 transform -rotate-45 group-hover:translate-x-[-3px] transition-transform" />
+                    </div>
+                  </a>
+
+                  {/* 4. ویز (Waze) */}
+                  <a
+                    href={config.wazeLink || `https://waze.com/ul?ll=${config.latitude || 28.342913},${config.longitude || 51.526707}&navigate=yes`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group p-4 rounded-2xl bg-gradient-to-br from-cyan-50/70 via-sky-50/40 to-white hover:from-cyan-100/80 hover:to-sky-50 border border-cyan-200/80 hover:border-cyan-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-500/25 group-hover:scale-105 transition-transform shrink-0">
+                          <Navigation className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-black text-slate-900 group-hover:text-sky-700 transition-colors">
+                            مسیریاب ویز (Waze)
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            مسیریابی با ترافیک لحظه‌ای و هشدارهای مسیر
+                          </div>
+                        </div>
+                      </div>
+                      <span className="p-1 rounded-lg bg-sky-100/80 text-sky-700 group-hover:bg-sky-500 group-hover:text-white transition-colors shrink-0">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-cyan-100/70 flex items-center justify-between text-xs font-bold text-sky-700">
+                      <span>باز کردن و شروع مسیریابی</span>
+                      <Navigation className="w-3.5 h-3.5 transform -rotate-45 group-hover:translate-x-[-3px] transition-transform" />
+                    </div>
+                  </a>
+                </div>
+
+                {/* Destination info notice */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">
+                    <strong>مقصد نهایی:</strong> مرکز آموزش علمی کاربردی کوثر کاکی (بلوار ولیعصر، جنب میدان انقلاب)
+                  </span>
+                </div>
               </motion.div>
             )}
 

@@ -1055,7 +1055,7 @@ export default function AdminContactManager() {
                         longitude: lng,
                         neshanLink: `https://nshn.ir/search/${lat},${lng}`,
                         baladLink: `https://balad.ir/location?latitude=${lat}&longitude=${lng}`,
-                        googleMapsLink: `https://www.google.com/maps?q=28.34291274764676,51.52670733886608`,
+                        googleMapsLink: `https://www.google.com/maps/dir/?api=1&destination=28.34291274764676,51.52670733886608`,
                         wazeLink: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,
                         mapIframe: `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=51.519707%2C28.337913%2C51.533707%2C28.347913&amp;layer=mapnik&amp;marker=28.342913%2C51.526707" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`
                       };

@@ -1,6 +1,8 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -602,10 +604,104 @@ export async function initializeDatabase() {
       await client.query(`ALTER TABLE contact_messages ALTER COLUMN email DROP NOT NULL;`);
     } catch {}
 
+    // ۱۰. جدول ذخیره‌سازی دائمی فایل‌ها و تصاویر آپلودشده در دیتابیس (ماندگاری کامل در سرور)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS uploaded_files (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) UNIQUE NOT NULL,
+        folder VARCHAR(100) NOT NULL,
+        original_name VARCHAR(255),
+        mimetype VARCHAR(100),
+        size INT,
+        file_data TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_uploaded_files_filename ON uploaded_files(filename);
+      CREATE INDEX IF NOT EXISTS idx_uploaded_files_folder ON uploaded_files(folder);
+    `);
+
     console.log('🚀 آماده‌سازی ساختار پایگاه داده با موفقیت به اتمام رسید.');
+
+    // بازخوانی و همگام‌سازی فایل‌های سرور
+    await restoreUploadedFilesFromDB();
+    await seedExistingDiskFilesToDB();
   } catch (error) {
     console.error('❌ خطا در اتصال یا آماده‌سازی پایگاه داده:', error);
   } finally {
     if (client) client.release();
+  }
+}
+
+/**
+ * بازیابی فایل‌ها از پایگاه‌داده PostgreSQL به پوشه دیسک uploads
+ */
+export async function restoreUploadedFilesFromDB() {
+  try {
+    const result = await pool.query('SELECT filename, folder, file_data FROM uploaded_files');
+    if (result.rows.length > 0) {
+      console.log(`🔄 بازخوانی و همگام‌سازی ${result.rows.length} فایل آپلودشده از پایگاه‌داده به دیسک...`);
+      for (const row of result.rows) {
+        const folderPath = path.join(process.cwd(), 'uploads', row.folder || 'general');
+        if (!fs.existsSync(folderPath)) {
+          fs.mkdirSync(folderPath, { recursive: true });
+        }
+        const filePath = path.join(folderPath, row.filename);
+        if (!fs.existsSync(filePath)) {
+          const buffer = Buffer.from(row.file_data, 'base64');
+          fs.writeFileSync(filePath, buffer);
+        }
+      }
+      console.log('✅ فایل‌های آپلودشده از سرور دیتابیس با موفقیت آماده به کار شدند.');
+    }
+  } catch (e) {
+    console.warn('⚠️ عدم امکان بازیابی فایل‌ها از دیتابیس در زمان راه‌اندازی:', e);
+  }
+}
+
+/**
+ * ذخیره فایل‌های موجود روی دیسک در پایگاه‌داده دیتابیس تا هیچ‌گاه پاک نشوند
+ */
+export async function seedExistingDiskFilesToDB() {
+  try {
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) return;
+
+    const walk = (dir: string): { filePath: string; folder: string; filename: string }[] => {
+      let results: { filePath: string; folder: string; filename: string }[] = [];
+      const list = fs.readdirSync(dir);
+      list.forEach((file) => {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+        if (stat && stat.isDirectory()) {
+          results = results.concat(walk(fullPath));
+        } else {
+          const relativeFolder = path.relative(uploadsDir, path.dirname(fullPath)) || 'general';
+          results.push({ filePath: fullPath, folder: relativeFolder, filename: file });
+        }
+      });
+      return results;
+    };
+
+    const files = walk(uploadsDir);
+    for (const f of files) {
+      const buffer = fs.readFileSync(f.filePath);
+      const base64 = buffer.toString('base64');
+      const ext = path.extname(f.filename).toLowerCase();
+      let mimetype = 'application/octet-stream';
+      if (['.jpg', '.jpeg'].includes(ext)) mimetype = 'image/jpeg';
+      else if (ext === '.png') mimetype = 'image/png';
+      else if (ext === '.webp') mimetype = 'image/webp';
+      else if (ext === '.svg') mimetype = 'image/svg+xml';
+      else if (ext === '.pdf') mimetype = 'application/pdf';
+
+      await pool.query(
+        `INSERT INTO uploaded_files (filename, folder, original_name, mimetype, size, file_data)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (filename) DO NOTHING`,
+        [f.filename, f.folder, f.filename, mimetype, buffer.length, base64]
+      );
+    }
+  } catch (err) {
+    console.warn('⚠️ همگام‌سازی فایل‌های فعلی با دیتابیس با خطا مواجه شد:', err);
   }
 }

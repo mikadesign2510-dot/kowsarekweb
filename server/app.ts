@@ -155,6 +155,80 @@ app.use('/uploads', express.static(uploadsDir, {
   immutable: true,
 }));
 
+// بازیابی آنی و خودکار فایل‌های آپلودشده از پایگاه‌داده PostgreSQL در صورت عدم وجود موقت روی دیسک
+app.get('/uploads/:folder/:filename', async (req, res, next) => {
+  try {
+    const { folder, filename } = req.params;
+    const safeFolder = String(folder).replace(/[^a-z0-9_-]/gi, '') || 'general';
+    const safeFilename = path.basename(filename);
+    const localFilePath = path.join(uploadsDir, safeFolder, safeFilename);
+
+    if (fs.existsSync(localFilePath)) {
+      return res.sendFile(localFilePath);
+    }
+
+    const dbRes = await pool.query(
+      'SELECT mimetype, file_data FROM uploaded_files WHERE filename = $1 LIMIT 1',
+      [safeFilename]
+    );
+
+    if (dbRes.rows.length > 0) {
+      const { mimetype, file_data } = dbRes.rows[0];
+      const buffer = Buffer.from(file_data, 'base64');
+      const targetFolder = path.join(uploadsDir, safeFolder);
+      if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder, { recursive: true });
+      }
+      fs.writeFileSync(localFilePath, buffer);
+
+      if (mimetype) {
+        res.setHeader('Content-Type', mimetype);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      return res.send(buffer);
+    }
+  } catch (err) {
+    console.warn('⚠️ خطا در بازیابی آنی فایل آپلودشده از دیتابیس:', err);
+  }
+  next();
+});
+
+app.get('/uploads/:filename', async (req, res, next) => {
+  try {
+    const safeFilename = path.basename(req.params.filename);
+    const localFilePath = path.join(uploadsDir, safeFilename);
+
+    if (fs.existsSync(localFilePath)) {
+      return res.sendFile(localFilePath);
+    }
+
+    const dbRes = await pool.query(
+      'SELECT folder, mimetype, file_data FROM uploaded_files WHERE filename = $1 LIMIT 1',
+      [safeFilename]
+    );
+
+    if (dbRes.rows.length > 0) {
+      const { mimetype, file_data, folder } = dbRes.rows[0];
+      const buffer = Buffer.from(file_data, 'base64');
+      const targetFolder = path.join(uploadsDir, folder || 'general');
+      if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder, { recursive: true });
+      }
+      const targetPath = path.join(targetFolder, safeFilename);
+      fs.writeFileSync(targetPath, buffer);
+
+      if (mimetype) {
+        res.setHeader('Content-Type', mimetype);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      return res.send(buffer);
+    }
+  } catch (err) {
+    console.warn('⚠️ خطا در بازیابی فایل:', err);
+  }
+  next();
+});
+
 // ارائه فایل‌های عمومی (robots.txt, sitemap.xml, favicon)
 app.use(express.static(publicDir, {
   maxAge: '7d',
