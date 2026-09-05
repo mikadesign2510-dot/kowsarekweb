@@ -15,9 +15,14 @@ export const pool = new Pool({
   ssl: {
     rejectUnauthorized: false,
   },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 10,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+});
+
+// جلوگیری از کرش کردن سرور هنگام بسته شدن اتصالات معلق نئون
+pool.on('error', (err: Error) => {
+  console.warn('⚠️ PostgreSQL Pool idle client notice (non-fatal, auto-reconnecting):', err.message);
 });
 
 /**
