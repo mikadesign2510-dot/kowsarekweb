@@ -14,23 +14,34 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// ایجاد یا به‌روزرسانی کلی لیست بنرها
+// ایجاد یا به‌روزرسانی کلی لیست بنرها (UPSERT Safe Sync)
 router.post('/sync', async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const { banners } = req.body;
     if (!Array.isArray(banners)) {
+      client.release();
       return res.status(400).json({ success: false, message: 'لیست بنرها نامعتبر است' });
     }
 
     await client.query('BEGIN');
-    // استفاده از قفل مشورتی برای جلوگیری از تداخل تراکنش‌های همزمان
     await client.query('SELECT pg_advisory_xact_lock(74219)');
-    await client.query('DELETE FROM banners');
+
+    const incomingIds = banners.map((b: any) => String(b.id)).filter(Boolean);
+    if (incomingIds.length > 0) {
+      await client.query('DELETE FROM banners WHERE NOT (id = ANY($1))', [incomingIds]);
+    } else {
+      await client.query('DELETE FROM banners');
+    }
 
     for (let i = 0; i < banners.length; i++) {
       const b = banners[i];
       const bannerId = String(b.id || `banner-${Date.now()}-${i}`);
+      const showButton = b.showButton !== false && b.showButton !== 'false';
+      const isActive = b.isActive !== false && b.isActive !== 'false';
+      const order = Number(b.order) || (i + 1);
+      const duration = Number(b.duration) || 5;
+
       await client.query(
         `INSERT INTO banners (id, image_url, title, subtitle, link, show_button, button_text, "order", is_active, duration, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -46,16 +57,16 @@ router.post('/sync', async (req: Request, res: Response) => {
            duration = EXCLUDED.duration`,
         [
           bannerId,
-          b.imageUrl || '',
+          b.imageUrl || b.image_url || '',
           b.title || null,
           b.subtitle || null,
           b.link || null,
-          b.showButton !== false,
-          b.buttonText || 'مشاهده جزئیات',
-          b.order !== undefined ? b.order : i + 1,
-          b.isActive ?? true,
-          b.duration || 5,
-          b.createdAt || new Date().toLocaleDateString('fa-IR')
+          showButton,
+          b.buttonText || b.button_text || 'مشاهده جزئیات',
+          order,
+          isActive,
+          duration,
+          b.createdAt || b.created_at || new Date().toLocaleDateString('fa-IR')
         ]
       );
     }
@@ -76,6 +87,11 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const b = req.body;
     const bannerId = String(b.id || `banner-${Date.now()}`);
+    const showButton = b.showButton !== false && b.showButton !== 'false';
+    const isActive = b.isActive !== false && b.isActive !== 'false';
+    const order = Number(b.order) || 1;
+    const duration = Number(b.duration) || 5;
+
     const result = await pool.query(
       `INSERT INTO banners (id, image_url, title, subtitle, link, show_button, button_text, "order", is_active, duration, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -92,16 +108,16 @@ router.post('/', async (req: Request, res: Response) => {
        RETURNING *`,
       [
         bannerId,
-        b.imageUrl || '',
+        b.imageUrl || b.image_url || '',
         b.title || null,
         b.subtitle || null,
         b.link || null,
-        b.showButton !== false,
-        b.buttonText || 'مشاهده جزئیات',
-        b.order || 1,
-        b.isActive ?? true,
-        b.duration || 5,
-        b.createdAt || new Date().toLocaleDateString('fa-IR')
+        showButton,
+        b.buttonText || b.button_text || 'مشاهده جزئیات',
+        order,
+        isActive,
+        duration,
+        b.createdAt || b.created_at || new Date().toLocaleDateString('fa-IR')
       ]
     );
 
@@ -117,6 +133,9 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const b = req.body;
+    const showButton = b.showButton !== undefined ? (b.showButton !== false && b.showButton !== 'false') : undefined;
+    const isActive = b.isActive !== undefined ? (b.isActive !== false && b.isActive !== 'false') : undefined;
+
     const result = await pool.query(
       `UPDATE banners SET
          image_url = COALESCE($1, image_url),
@@ -131,15 +150,15 @@ router.put('/:id', async (req: Request, res: Response) => {
        WHERE id = $10
        RETURNING *`,
       [
-        b.imageUrl,
+        b.imageUrl || b.image_url,
         b.title,
         b.subtitle,
         b.link,
-        b.showButton,
-        b.buttonText,
-        b.order,
-        b.isActive,
-        b.duration,
+        showButton,
+        b.buttonText || b.button_text,
+        b.order !== undefined ? Number(b.order) : undefined,
+        isActive,
+        b.duration !== undefined ? Number(b.duration) : undefined,
         id
       ]
     );
@@ -168,4 +187,3 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-

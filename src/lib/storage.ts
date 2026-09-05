@@ -1970,6 +1970,17 @@ export const storage = {
     };
     const updated = [...banners, newBanner].sort((a, b) => a.order - b.order);
     storage.saveBanners(updated);
+    
+    // Direct single API call + full sync
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch('/api/banners', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newBanner)
+      }).catch(e => console.warn('Single banner POST error:', e));
+    } catch {}
+
     storage.saveBannersToDB(updated).catch(e => console.warn('Banners DB sync error:', e));
     return newBanner;
   },
@@ -1978,6 +1989,16 @@ export const storage = {
     const banners = storage.getBanners();
     const updated = banners.map(b => String(b.id) === String(banner.id) ? { ...b, ...banner } : b).sort((a, b) => a.order - b.order);
     storage.saveBanners(updated);
+
+    try {
+      const headers = getAdminAuthHeaders();
+      fetch(`/api/banners/${banner.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(banner)
+      }).catch(e => console.warn('Single banner PUT error:', e));
+    } catch {}
+
     storage.saveBannersToDB(updated).catch(e => console.warn('Banners DB sync error:', e));
   },
 
