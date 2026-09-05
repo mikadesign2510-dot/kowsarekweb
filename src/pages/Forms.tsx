@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { storage, FormItem } from '../lib/storage';
 import DynamicSidebar from '../components/DynamicSidebar';
+import { PamphletCoverVisual } from '../components/PamphletCover';
 import { 
   FileText, Download, Search, Filter, CheckCircle2, 
   HelpCircle, AlertCircle, Info, ExternalLink, ArrowLeft, 
   Calendar, Layers, Sparkles, Building2, Tag, FileCheck,
   FileType, FileSpreadsheet, Archive, Check, Eye, X, BookOpen,
-  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User
+  FileCode, Clock, ShieldAlert, PhoneCall, GraduationCap, User, Palette
 } from 'lucide-react';
 
 export default function FormsPage() {
@@ -481,6 +482,14 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
                                 </span>
                               )}
                             </div>
+
+                            {/* Cover visual representation */}
+                            <div 
+                              onClick={() => setSelectedModalForm(item)}
+                              className="pt-2 pb-1 flex justify-center cursor-pointer hover:opacity-95 transition-opacity"
+                            >
+                              <PamphletCoverVisual item={item} size="sm" />
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold mb-3">
@@ -607,6 +616,13 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
 
               {/* Modal Body */}
               <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                {/* Pamphlet Cover Visual Banner */}
+                {selectedModalForm.itemType === 'pamphlet' && (
+                  <div className="flex flex-col items-center justify-center p-6 bg-slate-50/70 rounded-3xl border border-slate-100">
+                    <PamphletCoverVisual item={selectedModalForm} size="lg" />
+                  </div>
+                )}
+
                 {/* Pamphlet Details */}
                 {selectedModalForm.itemType === 'pamphlet' && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs">

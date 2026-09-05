@@ -4,6 +4,13 @@ import { uploadFileToServer } from '../../lib/uploadHelper';
 import SidebarWidgetsEditor from '../../components/admin/SidebarWidgetsEditor';
 import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 import { 
+  PamphletCoverVisual, 
+  PamphletFramePicker, 
+  PAMPHLET_FRAME_STYLES, 
+  PAMPHLET_COLOR_PRESETS, 
+  getPamphletColor 
+} from '../../components/PamphletCover';
+import { 
   Plus, Edit2, Trash2, Search, Filter, Eye,
   PanelRightClose,
   PanelLeftClose, Sparkles, 
@@ -13,7 +20,8 @@ import {
   CheckSquare, Square, Building2, FileCheck, FileType,
   Archive, Info, BookOpen, Clock, ArrowUpDown, ShieldCheck,
   RotateCcw, LayoutTemplate, GraduationCap, User, BookOpenCheck,
-  FileCode, CheckCircle2, Settings, HardDrive, FolderCheck, FolderOpen, Copy
+  FileCode, CheckCircle2, Settings, HardDrive, FolderCheck, FolderOpen, Copy,
+  Palette
 } from 'lucide-react';
 
 const DEFAULT_FORM_CATEGORIES = [
@@ -103,8 +111,8 @@ export default function AdminForms() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCustomField, setIsCustomField] = useState(false);
 
-  // Active Tab inside Editor Modal: 'details' | 'file' | 'instructions' | 'preview'
-  const [editorTab, setEditorTab] = useState<'details' | 'file' | 'instructions' | 'preview'>('details');
+  // Active Tab inside Editor Modal: 'details' | 'frame' | 'file' | 'instructions' | 'preview'
+  const [editorTab, setEditorTab] = useState<'details' | 'frame' | 'file' | 'instructions' | 'preview'>('details');
 
   // Custom Category creation input
   const [customCategory, setCustomCategory] = useState('');
@@ -223,7 +231,9 @@ export default function AdminForms() {
     academicTerm: '',
     degreeLevel: '',
     pageCount: '',
-    courseCode: ''
+    courseCode: '',
+    frameStyle: 'isometric-3d',
+    frameColor: 'indigo'
   });
 
   const loadData = async () => {
@@ -575,7 +585,9 @@ export default function AdminForms() {
       academicTerm: 'نیمسال اول (مهر)',
       degreeLevel: 'کارشناسی ناپیوسته',
       pageCount: '',
-      courseCode: 'CS-101'
+      courseCode: 'CS-101',
+      frameStyle: 'isometric-3d',
+      frameColor: 'indigo'
     });
     setIsCustomField(false);
     setEditingId(null);
@@ -610,7 +622,9 @@ export default function AdminForms() {
       academicTerm: item.academicTerm || '',
       degreeLevel: item.degreeLevel || '',
       pageCount: item.pageCount || '',
-      courseCode: item.courseCode || ''
+      courseCode: item.courseCode || '',
+      frameStyle: item.frameStyle || 'isometric-3d',
+      frameColor: item.frameColor || 'indigo'
     });
     setEditingId(item.id);
     setEditorTab('details');
@@ -1062,7 +1076,7 @@ export default function AdminForms() {
           }`}
         >
           <Settings className="w-4 h-4" />
-          <span>تنظیمات متون و نمایش</span>
+          <span>تنظیمات سربرگ و اطلاعات تماس (صفحه فرم‌ها و جزوات)</span>
         </button>
       </div>
 
@@ -1787,6 +1801,12 @@ export default function AdminForms() {
                                   <span className="font-bold text-slate-800 text-sm hover:text-indigo-600 cursor-pointer" onClick={() => handleOpenEdit(item)}>
                                     {item.title}
                                   </span>
+                                  {item.frameStyle && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold">
+                                      <Palette className="w-2.5 h-2.5" />
+                                      قاب {PAMPHLET_FRAME_STYLES.find(s => s.id === item.frameStyle)?.name || 'سه‌بعدی'}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-1 max-w-md">
                                   {item.description}
@@ -1955,6 +1975,14 @@ export default function AdminForms() {
                             <span>مدرس: {item.professorName}</span>
                           </div>
                         )}
+                      </div>
+
+                      {/* Visual Cover Mini Preview */}
+                      <div 
+                        onClick={() => handleOpenEdit(item)}
+                        className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center justify-center cursor-pointer hover:bg-indigo-50/40 transition-colors"
+                      >
+                        <PamphletCoverVisual item={item} size="sm" />
                       </div>
 
                       <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 font-light">
@@ -2392,13 +2420,13 @@ export default function AdminForms() {
       ) : activeTab === 'settings' ? (
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
           <div>
-            <h2 className="text-xl font-black text-slate-800 mb-2">تنظیمات متون و نمایش میز خدمت (صفحه اصلی)</h2>
-            <p className="text-sm text-slate-500">در این بخش می‌توانید متون و اطلاعات پشتیبانی بخش میز خدمت و فرم‌ها را در صفحه اصلی سایت تنظیم کنید.</p>
+            <h2 className="text-xl font-black text-slate-800 mb-2">تنظیمات سربرگ و اطلاعات تماس صفحه فرم‌ها و جزوات (forms/)</h2>
+            <p className="text-sm text-slate-500">در این بخش می‌توانید متن بنر بالایی، عناوین و شماره تماس‌های پشتیبانی مختص صفحه عمومی «فرم‌ها و جزوات دانشگاهی» را ویرایش کنید.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">متن نشانک (Badge)</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">متن نشانک بالای بنر (Badge)</label>
               <input 
                 type="text" 
                 value={siteSettings.formsBadge || ''} 
@@ -2406,12 +2434,12 @@ export default function AdminForms() {
                   const newSettings = { ...siteSettings, formsBadge: e.target.value };
                   setSiteSettings(newSettings);
                 }}
-                placeholder="میز خدمت الکترونیک"
+                placeholder="بانک منابع درسی و فرم‌های آموزشی"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">عنوان اصلی</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">عنوان بزرگ بنر صفحه</label>
               <input 
                 type="text" 
                 value={siteSettings.formsTitle || ''} 
@@ -2419,12 +2447,12 @@ export default function AdminForms() {
                   const newSettings = { ...siteSettings, formsTitle: e.target.value };
                   setSiteSettings(newSettings);
                 }}
-                placeholder="فرم‌های ضروری"
+                placeholder="جزوه و فرم‌های دانشگاهی"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-slate-700 mb-2">متن توضیحات زیر عنوان</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">متن توضیحات زیر عنوان در بنر</label>
               <textarea 
                 value={siteSettings.formsSubtitle || ''} 
                 onChange={(e) => {
@@ -2515,13 +2543,13 @@ export default function AdminForms() {
             </div>
 
             {/* Modal Sub-Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0">
+            <div className={`grid ${formData.itemType === 'pamphlet' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} border-b border-slate-100 bg-slate-50/60 p-2 sm:p-2.5 gap-2 shrink-0`}>
               <button
                 type="button"
                 onClick={() => setEditorTab('details')}
                 className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
                   editorTab === 'details'
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                    ? (formData.itemType === 'pamphlet' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25' : 'bg-blue-600 text-white shadow-sm shadow-blue-600/25')
                     : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/70 hover:bg-slate-50'
                 }`}
               >
@@ -2529,12 +2557,27 @@ export default function AdminForms() {
                 <span className="truncate">{formData.itemType === 'pamphlet' ? 'مشخصات درس و جزوه' : 'مشخصات اصلی فرم'}</span>
               </button>
 
+              {formData.itemType === 'pamphlet' && (
+                <button
+                  type="button"
+                  onClick={() => setEditorTab('frame')}
+                  className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                    editorTab === 'frame'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25'
+                      : 'bg-white text-indigo-700 hover:text-indigo-900 border border-indigo-200/70 hover:bg-indigo-50/50'
+                  }`}
+                >
+                  <Palette className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span className="truncate">طرح قاب و رنگ جلد ⭐</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setEditorTab('file')}
                 className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
                   editorTab === 'file'
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                    ? (formData.itemType === 'pamphlet' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25' : 'bg-blue-600 text-white shadow-sm shadow-blue-600/25')
                     : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/70 hover:bg-slate-50'
                 }`}
               >
@@ -2547,7 +2590,7 @@ export default function AdminForms() {
                 onClick={() => setEditorTab('instructions')}
                 className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
                   editorTab === 'instructions'
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                    ? (formData.itemType === 'pamphlet' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25' : 'bg-blue-600 text-white shadow-sm shadow-blue-600/25')
                     : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/70 hover:bg-slate-50'
                 }`}
               >
@@ -2560,12 +2603,12 @@ export default function AdminForms() {
                 onClick={() => setEditorTab('preview')}
                 className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
                   editorTab === 'preview'
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                    ? (formData.itemType === 'pamphlet' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25' : 'bg-blue-600 text-white shadow-sm shadow-blue-600/25')
                     : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/70 hover:bg-slate-50'
                 }`}
               >
                 <Eye className="w-4 h-4 shrink-0" />
-                <span className="truncate">پیش‌نمایش کارت</span>
+                <span className="truncate">پیش‌نمایش</span>
               </button>
             </div>
 
@@ -2911,6 +2954,19 @@ export default function AdminForms() {
                   </div>
                 )}
 
+                {/* TAB: PAMPHLET FRAME & COLOR PICKER */}
+                {editorTab === 'frame' && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    <PamphletFramePicker
+                      selectedStyle={formData.frameStyle}
+                      selectedColor={formData.frameColor}
+                      onStyleChange={(style) => setFormData(prev => ({ ...prev, frameStyle: style as any }))}
+                      onColorChange={(color) => setFormData(prev => ({ ...prev, frameColor: color }))}
+                      formData={formData}
+                    />
+                  </div>
+                )}
+
                 {/* TAB 2: FILE & UPLOAD */}
                 {editorTab === 'file' && (
                   <div className="space-y-6 animate-in fade-in duration-200">
@@ -3177,6 +3233,15 @@ export default function AdminForms() {
                 {editorTab === 'preview' && (
                   <div className="space-y-6 animate-in fade-in duration-200">
                     <p className="text-xs text-slate-400">پیش‌نمایش ظاهر نهایی این کارت برای دانشجویان:</p>
+
+                    {formData.itemType === 'pamphlet' && (
+                      <div className="flex flex-col items-center justify-center p-6 bg-slate-50/80 rounded-3xl border border-slate-200/80">
+                        <PamphletCoverVisual item={formData} size="lg" />
+                        <span className="text-[11px] font-bold text-slate-500 mt-4">
+                          سبک قاب انتخابی: {PAMPHLET_FRAME_STYLES.find(s => s.id === (formData.frameStyle || 'isometric-3d'))?.name} | رنگ: {PAMPHLET_COLOR_PRESETS.find(c => c.id === (formData.frameColor || 'indigo'))?.name}
+                        </span>
+                      </div>
+                    )}
                     
                     <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md max-w-md mx-auto space-y-4">
                       <div className="flex items-center justify-between">

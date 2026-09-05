@@ -330,6 +330,8 @@ export interface FormItem {
   pageCount?: string | number;
   coverImage?: string;
   courseCode?: string;
+  frameStyle?: 'classic-book' | 'modern-glass' | 'spiral-notebook' | 'royal-gold' | 'isometric-3d' | 'blueprint-tech' | 'minimal-card' | 'magazine-pro' | string;
+  frameColor?: string;
 }
 
 export interface NewsAttachment {
@@ -623,6 +625,8 @@ export const defaultForms: FormItem[] = [
     degreeLevel: 'کارشناسی ناپیوسته',
     pageCount: '۷۸ صفحه',
     courseCode: 'CS-204',
+    frameStyle: 'isometric-3d',
+    frameColor: 'indigo',
     instructions: [
       'مطالعه پیش از جلسات کلاسی جهت آمادگی در کارگاه‌ها',
       'پاسخگویی به تمرینات انتهای هر فصل الزامی است'
@@ -651,7 +655,9 @@ export const defaultForms: FormItem[] = [
     academicTerm: 'نیمسال اول و دوم',
     degreeLevel: 'کاردانی حرفه‌ای',
     pageCount: '۶۲ صفحه',
-    courseCode: 'ACC-110'
+    courseCode: 'ACC-110',
+    frameStyle: 'royal-gold',
+    frameColor: 'emerald'
   },
   {
     id: 'pamphlet-3',
@@ -676,7 +682,9 @@ export const defaultForms: FormItem[] = [
     academicTerm: 'نیمسال اول ۱۴۰۳-۱۴۰۴',
     degreeLevel: 'کارشناسی',
     pageCount: '۵۴ صفحه',
-    courseCode: 'LAW-302'
+    courseCode: 'LAW-302',
+    frameStyle: 'spiral-notebook',
+    frameColor: 'rose'
   }
 ];
 
