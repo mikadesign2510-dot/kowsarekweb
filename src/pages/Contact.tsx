@@ -148,7 +148,13 @@ export default function Contact() {
   const activeFaqs = config.faqs.filter(f => f.isActive);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC] text-slate-800 selection:bg-blue-100 selection:text-blue-900 font-sans pb-24" dir="rtl">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className="min-h-screen bg-[#FBFBFC] text-slate-800 selection:bg-blue-100 selection:text-blue-900 font-sans pb-24" 
+      dir="rtl"
+    >
       
       {/* 1. Minimal Header Section */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 border-b border-slate-200/70 bg-white overflow-hidden">
@@ -885,6 +891,6 @@ export default function Contact() {
         </section>
       )}
 
-    </div>
+    </motion.div>
   );
 }

@@ -62,7 +62,12 @@ export default function NewsDetail() {
     .slice(0, 3);
 
   return (
-    <article className="min-h-screen pb-24 bg-slate-50">
+    <motion.article 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className="min-h-screen pb-24 bg-slate-50"
+    >
       {/* Hero Image Section */}
       <div className="w-full h-[45vh] md:h-[60vh] relative bg-slate-900 overflow-hidden">
         <img 
@@ -300,6 +305,6 @@ export default function NewsDetail() {
           </div>
         </div>
       )}
-    </article>
+    </motion.article>
   );
 }

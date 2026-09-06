@@ -199,7 +199,12 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
 
   return (
     <div className="min-h-screen pt-8 pb-24 bg-slate-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10"
+      >
         
         {/* Page Header Banner */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white p-8 md:p-14 shadow-xl shadow-blue-950/10">
@@ -588,7 +593,7 @@ ${form.instructions?.map((inst, idx) => `${idx + 1}. ${inst}`).join('\n') || 'م
 
         </div>
 
-      </div>
+      </motion.div>
 
       {/* DETAIL & INSTRUCTIONS MODAL */}
       <AnimatePresence>

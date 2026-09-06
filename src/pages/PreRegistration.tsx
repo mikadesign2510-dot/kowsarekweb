@@ -40,6 +40,7 @@ export default function PreRegistration() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
         className="bg-white rounded-[3rem] shadow-[0_20px_60px_rgba(37,99,235,0.08)] border border-blue-50 overflow-hidden p-8 lg:p-12"
       >
         <div className="text-center mb-10">
