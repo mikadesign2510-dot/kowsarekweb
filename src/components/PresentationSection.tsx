@@ -169,42 +169,36 @@ export default function PresentationSection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center"
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center"
             >
-              {/* Left Column (Text & Details) */}
-              <div className="lg:col-span-6 space-y-5">
+              {/* Text & Details Column - Balanced 6 Cols */}
+              <div className="lg:col-span-6 space-y-5 text-right">
                 {currentSection.subtitle && (
-                  <div className="inline-block bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-lg">
+                  <div className="inline-block bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs">
                     {currentSection.subtitle}
                   </div>
                 )}
 
-                <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
                   {currentSection.title}
                 </h3>
 
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed text-justify font-normal">
+                <p className="text-slate-300 text-sm sm:text-base leading-loose font-normal">
                   {currentSection.content}
                 </p>
 
                 {/* Badges / Highlights */}
-                <div className="pt-2 flex flex-wrap gap-2.5">
-                  {currentSection.frameBadgeText && (
-                    <span className="bg-slate-800 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {currentSection.frameBadgeText}
-                    </span>
-                  )}
-                  <span className="bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-blue-400" />
-                    بخش شماره {currentIndex + 1} معرفی مرکز
+                <div className="pt-1 flex flex-wrap gap-2.5">
+                  <span className="bg-slate-800/90 border border-slate-700/80 text-blue-300 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 shadow-xs">
+                    <Layers className="w-4 h-4 text-blue-400" />
+                    بخش {currentIndex + 1} از {sections.length} معرفی مرکز
                   </span>
                 </div>
 
-                <div className="pt-4 flex items-center gap-4">
+                <div className="pt-2 flex items-center gap-4">
                   <Link
                     to="/presentation"
-                    className="inline-flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                    className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-4 py-2 rounded-xl border border-blue-500/30"
                   >
                     <Eye className="w-4 h-4" />
                     <span>مشاهده اسلایدهای سه‌بعدی تمام‌صفحه</span>
@@ -213,31 +207,25 @@ export default function PresentationSection() {
                 </div>
               </div>
 
-              {/* Right Column (Visual Image Showcase) */}
+              {/* Visual Image Showcase - Balanced 6 Cols */}
               <div className="lg:col-span-6">
-                <div className="relative group rounded-2xl overflow-hidden bg-slate-900 border border-slate-700/80 shadow-2xl aspect-[16/10] sm:aspect-[21/11]">
+                <div className="relative group rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border-2 border-slate-700/80 shadow-2xl shadow-black/60 aspect-[16/10] ring-1 ring-white/10">
                   {currentSection.image ? (
                     <img
                       src={currentSection.image}
                       alt={currentSection.title}
-                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-900 to-indigo-950 flex flex-col items-center justify-center p-6 text-center">
-                      <Sparkles className="w-12 h-12 text-blue-400 mb-3 opacity-60" />
-                      <span className="text-white font-bold text-sm">{currentSection.title}</span>
+                    <div className="w-full h-full bg-gradient-to-br from-blue-900 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-8 text-center">
+                      <Sparkles className="w-14 h-14 text-blue-400 mb-3 opacity-60" />
+                      <span className="text-white font-bold text-base">{currentSection.title}</span>
                       <span className="text-slate-400 text-xs mt-1">تصویر معرفی مرکز</span>
                     </div>
                   )}
 
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
-
-                  {/* Bottom Image Tag */}
-                  <div className="absolute bottom-3 right-3 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{currentSection.frameBadgeText || currentSection.title}</span>
-                  </div>
+                  {/* Subtle clean ambient vignette */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
                 </div>
               </div>
             </motion.div>

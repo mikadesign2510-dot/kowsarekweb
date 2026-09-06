@@ -371,7 +371,7 @@ export default function AdminSettings() {
               </div>
               <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-500 space-y-1.5 border border-slate-200/60 leading-relaxed">
                 <p className="font-semibold text-slate-700">• راهنمای تصویر:</p>
-                <p>• فرمت‌های مجاز: PNG, JPG, SVG, WEBP (حداکثر ۲ مگابایت)</p>
+                <p>• فرمت‌های مجاز: PNG, JPG, SVG, WEBP (حداکثر ۲۰ مگابایت)</p>
                 <p>• ابعاد پیشنهادی: ارتفاع ۶۰ تا ۸۰ پیکسل (عرض متناسب)</p>
                 <p>• برای ظاهر بهتر در حالت روشن و تاریک، از تصویر با پس‌زمینه شفاف (Transparent) استفاده نمایید.</p>
               </div>

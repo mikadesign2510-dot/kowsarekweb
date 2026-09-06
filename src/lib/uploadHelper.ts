@@ -1,6 +1,10 @@
 /**
  * ابزار آپلود مستقیم فایل و تبدیل/فشرده‌سازی خودکار تصاویر به WebP برای دانشگاه کوثر
+ * ارتقای محدودیت حجم تصاویر به سقف ۲۰ مگابایت
  */
+export const MAX_IMAGE_SIZE_MB = 20;
+export const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+
 export interface UploadResult {
   success: boolean;
   url: string;
@@ -16,11 +20,117 @@ export interface MultiUploadResult {
   message?: string;
 }
 
+export interface ServerImageItem {
+  id: string;
+  name: string;
+  originalName?: string;
+  folder: string;
+  url: string;
+  size: number;
+  sizeFormatted: string;
+  createdAt: string | Date;
+  ext: string;
+  isImage: boolean;
+}
+
+export interface ImagesListResponse {
+  success: boolean;
+  count: number;
+  totalSize: number;
+  totalSizeFormatted: string;
+  folderStats: Record<string, { count: number; size: number; sizeFormatted: string }>;
+  data: ServerImageItem[];
+}
+
+/**
+ * دریافت توکن احراز هویت ادمین
+ */
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('kowsar_jwt_token') || localStorage.getItem('kowsar_admin_token');
+  const authData = localStorage.getItem('kowsar_admin_auth');
+  let email = 'admin@kowsar.ac.ir';
+  if (authData) {
+    try {
+      const parsed = JSON.parse(authData);
+      if (parsed.email) email = parsed.email;
+    } catch {}
+  }
+  return {
+    'x-admin-email': email,
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+}
+
+/**
+ * دریافت لیست تمام تصاویر از سرور
+ */
+export async function fetchServerImages(folder: string = 'all', search: string = ''): Promise<ImagesListResponse> {
+  try {
+    const params = new URLSearchParams();
+    if (folder && folder !== 'all') params.set('folder', folder);
+    if (search) params.set('q', search);
+
+    const res = await fetch(`/api/upload/images?${params.toString()}`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success) return json;
+    }
+  } catch (err) {
+    console.warn('Error fetching server images:', err);
+  }
+  return {
+    success: false,
+    count: 0,
+    totalSize: 0,
+    totalSizeFormatted: '۰ کیلوبایت',
+    folderStats: {},
+    data: []
+  };
+}
+
+/**
+ * حذف یک تصویر از سرور
+ */
+export async function deleteServerImage(folder: string, filename: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch(`/api/upload/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const json = await res.json();
+    return json;
+  } catch (err: any) {
+    return { success: false, message: err.message || 'خطا در ارتباط با سرور' };
+  }
+}
+
+/**
+ * حذف دسته‌ای تصاویر از سرور
+ */
+export async function deleteBatchServerImages(items: { folder: string; filename: string }[]): Promise<{ success: boolean; count?: number; message: string }> {
+  try {
+    const res = await fetch('/api/upload/delete-batch', {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ items })
+    });
+    const json = await res.json();
+    return json;
+  } catch (err: any) {
+    return { success: false, message: err.message || 'خطا در حذف دسته‌ای فایل‌ها' };
+  }
+}
+
 /**
  * فشرده‌سازی و تبدیل هوشمند تصاویر به فرمت مدرن WebP در مرورگر
- * تصاویر تا سقف رزولوشن Full HD (1920px) مقیاس شده و کیفیت آن‌ها بهینه می‌شود
+ * تصاویر تا سقف رزولوشن 2K/Ultra HD (2560px) با حفظ بالاترین شفافیت مقیاس می‌شوند
  */
-export async function optimizeImageToWebP(file: File, maxWidth = 1920, quality = 0.82): Promise<File> {
+export async function optimizeImageToWebP(file: File, maxWidth = 2560, quality = 0.85): Promise<File> {
   if (!file.type.startsWith('image/')) return file;
   if (file.type === 'image/svg+xml') return file; // SVG doesn't need WebP conversion
 
@@ -76,11 +186,22 @@ export async function optimizeImageToWebP(file: File, maxWidth = 1920, quality =
 }
 
 /**
- * آپلود یک فایل تک به سرور همراه با فشرده‌سازی خودکار و دریافت آدرس /uploads/folder/...
+ * آپلود یک فایل به سرور همراه با فشرده‌سازی خودکار و سقف مجاز ۲۰ مگابایت
  */
-export async function uploadFileToServer(originalFile: File, folder: string = 'general', maxWidth: number = 1920, quality: number = 0.82): Promise<UploadResult> {
+export async function uploadFileToServer(originalFile: File, folder: string = 'general', maxWidth: number = 2560, quality: number = 0.85): Promise<UploadResult> {
   const originalSizeMB = (originalFile.size / (1024 * 1024)).toFixed(2);
   
+  // بررسی سقف مجاز ۲۰ مگابایت برای تصویر
+  if (originalFile.type.startsWith('image/') && originalFile.size > MAX_IMAGE_SIZE_BYTES) {
+    return {
+      success: false,
+      url: '',
+      filename: originalFile.name,
+      sizeFormatted: `${originalSizeMB} مگابایت`,
+      message: `حجم فایل انتخابی (${originalSizeMB} مگابایت) بیشتر از سقف مجاز ۲۰ مگابایت است. لطفاً تصویری با حجم کمتر از ۲۰ مگابایت انتخاب فرمایید.`
+    };
+  }
+
   // بهینه‌سازی و تبدیل به WebP برای تصاویر
   let fileToUpload = originalFile;
   if (originalFile.type.startsWith('image/')) {
@@ -123,16 +244,11 @@ export async function uploadFileToServer(originalFile: File, folder: string = 'g
       responseText = await response.text();
       data = JSON.parse(responseText);
     } catch {
-      // سرور به جای JSON، صفحه HTML یا پاسخ متنی بازگردانده است (مثلاً خطای 413 وب‌سرور یا پروکسی)
       console.warn('Non-JSON response received from upload endpoint:', response.status, responseText.substring(0, 200));
       if (response.status === 413) {
-        throw new Error(`حجم فایل انتخابی (${originalSizeMB} مگابایت) بیشتر از سقف مجاز تعریف‌شده در وب‌سرور (Nginx) است (خطای 413). برای فایل‌های حجیم، می‌توانید فایل را از بخش دایرکتوری سرور انتخاب کنید یا حجم آن را فشرده فرمایید.`);
+        throw new Error(`حجم فایل انتخابی (${originalSizeMB} مگابایت) بیشتر از سقف مجاز تعریف‌شده است.`);
       } else if (response.status === 401 || response.status === 403) {
-        throw new Error(`دسترسی غیرمجاز یا نشست کاربری منقضی شده است (کد خطا: ${response.status}). لطفاً یک بار از پنل خارج و مجدداً وارد شوید.`);
-      } else if (response.status === 502 || response.status === 504) {
-        throw new Error(`پاسخگویی وب‌سرور با وقفه مواجه شد (کد خطا: ${response.status}). لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.`);
-      } else if (response.status === 404) {
-        throw new Error(`مسیر سرویس آپلود روی سرور یافت نشد (کد خطا: 404). لطفاً از فعال بودن سرویس بک‌اند اطمینان حاصل فرمایید.`);
+        throw new Error(`دسترسی غیرمجاز یا نشست کاربری منقضی شده است (کد خطا: ${response.status}).`);
       } else {
         throw new Error(`پاسخ وب‌سرور نامعتبر بود (کد وضعیت: ${response.status}).`);
       }

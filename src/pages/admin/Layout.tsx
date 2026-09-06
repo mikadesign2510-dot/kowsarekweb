@@ -32,9 +32,21 @@ import {
   PanelRightClose,
   PanelRightOpen,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  FolderKanban,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { AdminUser, AdminPanelConfig, defaultPanelConfig, storage } from '../../lib/storage';
+import { 
+  getAdminSession, 
+  clearAdminSession, 
+  refreshAdminSession, 
+  getRemainingSessionMs, 
+  getSessionTimeoutMinutes, 
+  ADMIN_SESSION_WARNING_EVENT, 
+  ADMIN_AUTH_CHANGED_EVENT 
+} from '../../lib/adminSession';
 import MenuReorderModal from './MenuReorderModal';
 
 export default function AdminLayout() {
@@ -46,6 +58,16 @@ export default function AdminLayout() {
   const [unreadTicketsCount, setUnreadTicketsCount] = useState(0);
   const [pendingReceiptsCount, setPendingReceiptsCount] = useState(0);
   const [newRegistrationsCount, setNewRegistrationsCount] = useState(0);
+
+  // وضعیت نشست و تایمر عدم فعالیت
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(() => Math.ceil(getRemainingSessionMs() / 1000));
+  const [showWarningModal, setShowWarningModal] = useState<boolean>(false);
+
+  const formatRemainingTime = (totalSec: number) => {
+    const m = Math.floor(Math.max(0, totalSec) / 60);
+    const s = Math.max(0, totalSec) % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [panelConfig, setPanelConfig] = useState<AdminPanelConfig>(defaultPanelConfig);
@@ -130,19 +152,26 @@ export default function AdminLayout() {
     };
     fetchIP();
 
-    const authData = localStorage.getItem('kowsar_admin_auth');
-    if (!authData) {
-      storage.addSecurityLog({
-        eventType: 'permission_denied',
-        severity: 'medium',
-        message: 'مسدودسازی دسترسی بدون احراز هویت',
-        details: 'تلاش برای دسترسی به پنل مدیریت بدون سشن فعال'
-      });
-      navigate('/admin/login');
+    // احراز هویت اولیه و بررسی عدم انقضای نشست (۱۰ دقیقه عدم فعالیت)
+    const activeSession = getAdminSession();
+    if (!activeSession) {
+      const logoutReason = localStorage.getItem('kowsar_admin_logout_reason');
+      if (logoutReason === 'inactivity') {
+        navigate('/admin/login?reason=inactivity');
+      } else {
+        storage.addSecurityLog({
+          eventType: 'permission_denied',
+          severity: 'medium',
+          message: 'مسدودسازی دسترسی بدون احراز هویت',
+          details: 'تلاش برای دسترسی به پنل مدیریت بدون سشن فعال'
+        });
+        navigate('/admin/login');
+      }
       return;
     }
+
     try {
-      const user = JSON.parse(authData);
+      const user = activeSession;
       // Normalize permissions
       if (user.permissions && typeof user.permissions === 'string') {
         try { user.permissions = JSON.parse(user.permissions); } catch { user.permissions = []; }
@@ -209,6 +238,30 @@ export default function AdminLayout() {
     window.addEventListener('kowsar_receipts_changed', updateUnreadContact);
     window.addEventListener('kowsar_registrations_changed', updateUnreadContact);
 
+    // تایمر لحظه‌ای بررسی زمان انقضای نشست (خروج خودکار پس از ۱۰ دقیقه عدم تعامل)
+    const sessionCheckTimer = setInterval(() => {
+      const remainingMs = getRemainingSessionMs();
+      const sec = Math.ceil(remainingMs / 1000);
+      setRemainingSeconds(sec);
+
+      if (sec <= 0) {
+        clearAdminSession('inactivity');
+        navigate('/admin/login?reason=inactivity');
+      } else if (sec <= 60) {
+        setShowWarningModal(true);
+      } else {
+        setShowWarningModal(false);
+      }
+    }, 1000);
+
+    const handleWarningEvent = (e: any) => {
+      setShowWarningModal(true);
+      if (e?.detail?.remainingSeconds) {
+        setRemainingSeconds(e.detail.remainingSeconds);
+      }
+    };
+    window.addEventListener(ADMIN_SESSION_WARNING_EVENT, handleWarningEvent);
+
     const interval = setInterval(() => {
       setUnresolvedLogsCount(storage.getUnresolvedErrorsCount());
       updateUnreadContact();
@@ -216,6 +269,8 @@ export default function AdminLayout() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(sessionCheckTimer);
+      window.removeEventListener(ADMIN_SESSION_WARNING_EVENT, handleWarningEvent);
       window.removeEventListener('kowsar_panel_config_changed', handleConfigChange);
       window.removeEventListener('kowsar_contact_messages_changed', updateUnreadContact);
       window.removeEventListener('kowsar_tickets_changed', updateUnreadContact);
@@ -224,17 +279,14 @@ export default function AdminLayout() {
     };
   }, [navigate]);
 
+  const handleExtendSession = () => {
+    refreshAdminSession();
+    setShowWarningModal(false);
+    setRemainingSeconds(Math.ceil(getRemainingSessionMs() / 1000));
+  };
+
   const handleLogout = () => {
-    if (currentUser) {
-      storage.addSecurityLog({
-        eventType: 'auth_attempt',
-        severity: 'low',
-        message: 'خروج از حساب کاربری',
-        userEmail: currentUser.email
-      });
-    }
-    localStorage.removeItem('kowsar_admin_auth');
-    localStorage.removeItem('kowsar_jwt_token');
+    clearAdminSession('manual');
     navigate('/admin/login');
   };
 
@@ -251,6 +303,7 @@ export default function AdminLayout() {
     { defaultName: 'معرفی مرکز (3D)', path: '/admin/presentation', icon: Layers, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_presentation' },
     { defaultName: 'مدیریت بنر و اسلایدر', path: '/admin/banners', icon: Images, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_banners' },
     { defaultName: 'نگارخانه (گالری)', path: '/admin/gallery', icon: Images, roles: ['super_admin', 'cultural_expert'], permissionKey: 'manage_gallery' },
+    { defaultName: 'مدیریت فایل و تصاویر', path: '/admin/media', icon: FolderKanban, roles: ['super_admin', 'cultural_expert', 'education_expert'], permissionKey: 'manage_media' },
     { defaultName: 'مدیریت جزوه و فرم‌ها', path: '/admin/forms', icon: FileText, roles: ['super_admin', 'education_expert', 'cultural_expert', 'custom_expert'], permissionKey: 'manage_forms' },
     { defaultName: 'مدیریت تماس با ما', path: '/admin/contact', icon: PhoneCall, roles: ['super_admin', 'education_expert', 'cultural_expert', 'custom_expert'], permissionKey: 'manage_contact', badge: unreadContactMessagesCount > 0 ? unreadContactMessagesCount : undefined },
     { defaultName: 'تنظیمات متون سایت', path: '/admin/settings', icon: Settings, roles: ['super_admin'], permissionKey: 'manage_settings' },
@@ -414,6 +467,22 @@ export default function AdminLayout() {
                     <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
                     <span>مشاهده سایت</span>
                   </Link>
+
+                  {/* نشانگر زمان باقی‌مانده نشست و تمدید */}
+                  <button
+                    type="button"
+                    onClick={handleExtendSession}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                      remainingSeconds <= 60
+                        ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                        : `${activeTheme.userBox} hover:border-blue-400`
+                    }`}
+                    title="زمان باقی‌مانده تا خروج خودکار به دلیل عدم فعالیت (برای تمدید کلیک کنید)"
+                  >
+                    <Clock className={`w-3.5 h-3.5 ${remainingSeconds <= 60 ? 'text-rose-600' : 'text-amber-500'}`} />
+                    <span className="font-mono text-xs">{formatRemainingTime(remainingSeconds)}</span>
+                    <RefreshCw className="w-3 h-3 opacity-60 hover:opacity-100 hover:rotate-180 transition-transform" />
+                  </button>
 
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${activeTheme.userBox}`}>
                     <span className="truncate max-w-[120px]">{currentUser.name}</span>
@@ -714,6 +783,22 @@ export default function AdminLayout() {
                   <Palette className="w-4 h-4 text-blue-500" />
                 </Link>
 
+                {/* نشانگر زمان باقی‌مانده نشست و تمدید */}
+                <button
+                  type="button"
+                  onClick={handleExtendSession}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                    remainingSeconds <= 60
+                      ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                      : `${activeTheme.userBox} hover:border-blue-400`
+                  }`}
+                  title="زمان باقی‌مانده تا خروج خودکار به دلیل عدم فعالیت (برای تمدید کلیک کنید)"
+                >
+                  <Clock className={`w-3.5 h-3.5 ${remainingSeconds <= 60 ? 'text-rose-600' : 'text-amber-500'}`} />
+                  <span className="font-mono text-xs">{formatRemainingTime(remainingSeconds)}</span>
+                  <RefreshCw className="w-3 h-3 opacity-60 hover:opacity-100 hover:rotate-180 transition-transform" />
+                </button>
+
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${activeTheme.userBox}`}>
                   <span className="truncate max-w-[120px]">{currentUser.name}</span>
                   <span className="text-[10px] opacity-75 font-normal hidden sm:inline">
@@ -738,6 +823,44 @@ export default function AdminLayout() {
               <Outlet />
             </Suspense>
             </main>
+          </div>
+        </div>
+      )}
+
+      {/* هشدار صوتی/تصویری انقضای نشست به دلیل عدم فعالیت */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-rose-200 animate-in zoom-in-95 duration-200 text-center space-y-5" dir="rtl">
+            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-rose-600/15">
+              <Clock className="w-8 h-8 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">
+                هشدار عدم فعالیت در پنل مدیریت
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium mt-2 leading-relaxed">
+                به منظور حفظ امنیت سامانه، در صورتی که کاری انجام ندهید نشست شما تا{' '}
+                <span className="font-mono font-black text-base text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200">{remainingSeconds}</span>{' '}
+                ثانیه دیگر به صورت اتوماتیک منقضی شده و خارج خواهید شد.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleExtendSession}
+                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>تمدید نشست و ادامه کار</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full sm:w-auto py-3 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-sm transition-colors"
+              >
+                خروج امن
+              </button>
+            </div>
           </div>
         </div>
       )}

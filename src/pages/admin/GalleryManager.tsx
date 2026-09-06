@@ -891,7 +891,7 @@ export default function GalleryManager() {
 
                       <div className="bg-white/80 p-3 rounded-xl border border-blue-50 shadow-2xs">
                         <span className="font-bold text-blue-900 block mb-1">محدودیت حجم و فشرده‌سازی:</span>
-                        حداکثر حجم مجاز هر فایل ۵ مگابایت است. سیستم تصاویر را خودکار به فرمت کم‌حجم WebP تبدیل می‌کند.
+                        حداکثر حجم مجاز هر فایل ۲۰ مگابایت است. سیستم تصاویر را خودکار به فرمت کم‌حجم WebP تبدیل می‌کند.
                       </div>
 
                       <div className="bg-white/80 p-3 rounded-xl border border-blue-50 shadow-2xs">

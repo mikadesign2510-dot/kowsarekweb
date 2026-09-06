@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Lock, User, ShieldCheck, Loader2, RefreshCw, AlertTriangle, ShieldAlert, Eye, EyeOff, ArrowRight, Home } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Lock, User, ShieldCheck, Loader2, RefreshCw, AlertTriangle, ShieldAlert, Eye, EyeOff, ArrowRight, Home, Clock } from 'lucide-react';
 import { storage } from '../../lib/storage';
+import { getAdminSession, initAdminSession, getSessionTimeoutMinutes } from '../../lib/adminSession';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -13,7 +14,9 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutRemaining, setLockoutRemaining] = useState(0);
+  const [inactivityNotice, setInactivityNotice] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Generate random 5-character alphanumeric captcha
   const generateCaptcha = () => {
@@ -27,6 +30,23 @@ export default function AdminLogin() {
   };
 
   useEffect(() => {
+    // ۱. بررسی اینکه آیا کارشناس قبلاً لاگین کرده و نشست او هنوز منقضی نشده است
+    const activeSession = getAdminSession();
+    if (activeSession) {
+      // کارشناس نشست معتبر دارد؛ نیازی به ورود مجدد نیست و مستقیماً وارد پنل می‌شود
+      navigate('/admin', { replace: true });
+      return;
+    }
+
+    // ۲. بررسی دلیل خروج (عدم فعالیت ۱۰ دقیقه‌ای یا خروج عادی)
+    const searchParams = new URLSearchParams(location.search);
+    const reason = searchParams.get('reason') || localStorage.getItem('kowsar_admin_logout_reason');
+    if (reason === 'inactivity') {
+      const timeoutMins = getSessionTimeoutMinutes();
+      setInactivityNotice(`نشست شما پس از ${timeoutMins} دقیقه عدم فعالیت جهت حفظ امنیت اطلاعات مرکز پایان یافت. لطفاً برای ورود مجدد، مشخصات خود را وارد نمایید.`);
+      localStorage.removeItem('kowsar_admin_logout_reason');
+    }
+
     generateCaptcha();
 
     // Check if account / IP is currently in a temporary lockout
@@ -125,10 +145,8 @@ export default function AdminLogin() {
             }
           }
 
-          localStorage.setItem(
-            'kowsar_admin_auth',
-            JSON.stringify(loggedInUser)
-          );
+          // راه‌اندازی نشست معتبر با ثبت زمان آخرین فعالیت
+          initAdminSession(loggedInUser, data.token);
           navigate('/admin');
           return;
         }
@@ -151,7 +169,8 @@ export default function AdminLogin() {
         userEmail: email,
         details: `نام کاربر: ${localUser.name} | نقش: ${localUser.role}`,
       });
-      localStorage.setItem('kowsar_admin_auth', JSON.stringify(localUser));
+      // راه‌اندازی نشست معتبر با ثبت زمان آخرین فعالیت
+      initAdminSession(localUser);
       navigate('/admin');
     } else {
       // افزایش شمارنده تلاش‌های ناموفق
@@ -217,6 +236,19 @@ export default function AdminLogin() {
             اتصال امن و محافظت‌شده فعال است
           </div>
         </div>
+
+        {/* اخطار پایان نشست به دلیل عدم فعالیت ۵ تا ۱۰ دقیقه‌ای */}
+        {inactivityNotice && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl mb-6 text-center space-y-1.5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-center gap-2 font-bold text-xs sm:text-sm text-amber-900">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>پایان خودکار نشست به دلیل عدم فعالیت</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed font-medium">
+              {inactivityNotice}
+            </p>
+          </div>
+        )}
 
         {/* اخطار قفل موقت در صورت وقوع Brute-Force */}
         {lockoutRemaining > 0 ? (

@@ -423,8 +423,187 @@ router.get('/folders', requireAuth, (req: AuthenticatedRequest, res: Response) =
 });
 
 
+// Endpoint to list all uploaded images with stats and folder grouping
+router.get('/images', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const folderParam = req.query.folder ? String(req.query.folder).trim() : null;
+    const searchParam = req.query.q ? String(req.query.q).toLowerCase().trim() : null;
+    const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.bmp', '.avif']);
+
+    const foldersToScan = folderParam && folderParam !== 'all'
+      ? [folderParam.replace(/[^a-z0-9_-]/gi, '') || 'general']
+      : DEFAULT_FOLDERS;
+
+    const filesMap = new Map<string, any>();
+
+    // 1. Scan filesystem
+    for (const folder of foldersToScan) {
+      const folderDir = path.join(UPLOADS_DIR, folder);
+      if (fs.existsSync(folderDir)) {
+        let names: string[] = [];
+        try {
+          names = fs.readdirSync(folderDir);
+        } catch {}
+
+        for (const name of names) {
+          if (name.startsWith('.')) continue;
+          const ext = path.extname(name).toLowerCase();
+          if (!IMAGE_EXTS.has(ext)) continue;
+
+          if (searchParam && !name.toLowerCase().includes(searchParam)) {
+            continue;
+          }
+
+          const filePath = path.join(folderDir, name);
+          try {
+            const stat = fs.statSync(filePath);
+            if (stat.isFile()) {
+              const key = `${folder}/${name}`;
+              filesMap.set(key, {
+                id: key,
+                name,
+                folder,
+                url: `/uploads/${folder}/${name}`,
+                size: stat.size,
+                sizeFormatted: stat.size >= 1024 * 1024 
+                  ? `${(stat.size / (1024 * 1024)).toFixed(2)} مگابایت` 
+                  : `${(stat.size / 1024).toFixed(1)} کیلوبایت`,
+                createdAt: stat.birthtime || stat.mtime,
+                ext,
+                isImage: true
+              });
+            }
+          } catch {}
+        }
+      }
+    }
+
+    // 2. Scan DB uploaded_files to guarantee sync
+    try {
+      let dbQuery = 'SELECT filename, folder, original_name, mimetype, size, created_at FROM uploaded_files';
+      const dbParams: any[] = [];
+      if (folderParam && folderParam !== 'all') {
+        dbQuery += ' WHERE folder = $1';
+        dbParams.push(folderParam.replace(/[^a-z0-9_-]/gi, ''));
+      }
+      const dbResult = await pool.query(dbQuery, dbParams);
+
+      for (const row of dbResult.rows) {
+        const ext = path.extname(row.filename || '').toLowerCase();
+        const isImg = IMAGE_EXTS.has(ext) || (row.mimetype && String(row.mimetype).startsWith('image/'));
+        if (!isImg) continue;
+
+        const folder = row.folder || 'general';
+        const name = row.filename;
+        const key = `${folder}/${name}`;
+
+        if (searchParam && !name.toLowerCase().includes(searchParam) && !(row.original_name && String(row.original_name).toLowerCase().includes(searchParam))) {
+          continue;
+        }
+
+        if (!filesMap.has(key)) {
+          const numSize = Number(row.size) || 0;
+          filesMap.set(key, {
+            id: key,
+            name,
+            originalName: row.original_name || name,
+            folder,
+            url: `/uploads/${folder}/${name}`,
+            size: numSize,
+            sizeFormatted: numSize >= 1024 * 1024 
+              ? `${(numSize / (1024 * 1024)).toFixed(2)} مگابایت` 
+              : `${(numSize / 1024).toFixed(1)} کیلوبایت`,
+            createdAt: row.created_at || new Date(),
+            ext,
+            isImage: true
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Could not query uploaded_files in /images:', e);
+    }
+
+    const images = Array.from(filesMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const totalSize = images.reduce((acc, img) => acc + (img.size || 0), 0);
+    const totalSizeFormatted = totalSize >= 1024 * 1024 * 1024
+      ? `${(totalSize / (1024 * 1024 * 1024)).toFixed(2)} گیگابایت`
+      : totalSize >= 1024 * 1024
+      ? `${(totalSize / (1024 * 1024)).toFixed(2)} مگابایت`
+      : `${(totalSize / 1024).toFixed(1)} کیلوبایت`;
+
+    // Folder counts
+    const folderStats: Record<string, { count: number; size: number; sizeFormatted: string }> = {};
+    for (const img of images) {
+      if (!folderStats[img.folder]) {
+        folderStats[img.folder] = { count: 0, size: 0, sizeFormatted: '0 کیلوبایت' };
+      }
+      folderStats[img.folder].count++;
+      folderStats[img.folder].size += img.size || 0;
+    }
+    for (const f of Object.keys(folderStats)) {
+      const s = folderStats[f].size;
+      folderStats[f].sizeFormatted = s >= 1024 * 1024 
+        ? `${(s / (1024 * 1024)).toFixed(2)} مگابایت` 
+        : `${(s / 1024).toFixed(1)} کیلوبایت`;
+    }
+
+    res.json({
+      success: true,
+      count: images.length,
+      totalSize,
+      totalSizeFormatted,
+      folderStats,
+      data: images
+    });
+  } catch (error: any) {
+    console.error('Get images error:', error);
+    res.status(500).json({ success: false, message: 'خطا در دریافت لیست تصاویر' });
+  }
+});
+
+// Batch delete endpoint for images / files
+router.post('/delete-batch', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { items } = req.body; // array of { folder: string, filename: string }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'هیچ فایلی برای حذف انتخاب نشده است' });
+    }
+
+    let deletedCount = 0;
+    for (const item of items) {
+      const folder = String(item.folder || '').replace(/[^a-z0-9_-]/g, '');
+      const filename = String(item.filename || item.name || '').replace(/[^a-zA-Z0-9_\u0600-\u06FF.-]/g, '');
+      if (!folder || !filename || folder.includes('..') || filename.includes('..')) continue;
+
+      const filePath = path.join(UPLOADS_DIR, folder, filename);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch {}
+      }
+
+      try {
+        await pool.query('DELETE FROM uploaded_files WHERE filename = $1 AND (folder = $2 OR folder IS NULL)', [filename, folder]);
+      } catch {}
+      deletedCount++;
+    }
+
+    res.json({
+      success: true,
+      count: deletedCount,
+      message: `${deletedCount} تصویر با موفقیت از سرور و پایگاه‌داده حذف شدند`
+    });
+  } catch (error: any) {
+    console.error('Batch delete error:', error);
+    res.status(500).json({ success: false, message: 'خطا در حذف دسته‌ای فایل‌ها' });
+  }
+});
+
 // Delete file endpoint
-router.delete('/:folder/:filename', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:folder/:filename', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const folder = String(req.params.folder || '');
     const filename = String(req.params.filename || '');
@@ -435,8 +614,26 @@ router.delete('/:folder/:filename', requireAuth, (req: AuthenticatedRequest, res
     const safeFolder = folder.replace(/[^a-z0-9_-]/g, '');
     const filePath = path.join(UPLOADS_DIR, safeFolder, filename);
 
+    let found = false;
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      try {
+        fs.unlinkSync(filePath);
+        found = true;
+      } catch {}
+    }
+
+    // Delete from DB as well
+    try {
+      const dbDel = await pool.query(
+        'DELETE FROM uploaded_files WHERE filename = $1 AND (folder = $2 OR folder IS NULL)', 
+        [filename, safeFolder]
+      );
+      if (dbDel.rowCount && dbDel.rowCount > 0) {
+        found = true;
+      }
+    } catch {}
+
+    if (found) {
       res.json({ success: true, message: 'فایل با موفقیت حذف شد' });
     } else {
       res.status(404).json({ success: false, message: 'فایل یافت نشد' });

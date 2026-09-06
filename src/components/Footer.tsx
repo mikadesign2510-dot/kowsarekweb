@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { storage } from '../lib/storage';
-import { Library, MapPin, Phone, Mail, Instagram, Send, Navigation, Compass } from 'lucide-react';
+import { getAdminSession, ADMIN_AUTH_CHANGED_EVENT } from '../lib/adminSession';
+import { Library, MapPin, Phone, Mail, Instagram, Send, Navigation, Compass, ShieldCheck } from 'lucide-react';
 
 const toPersianDigits = (num: number | string | undefined | null): string => {
   if (num === undefined || num === null) return '';
@@ -10,13 +12,21 @@ const toPersianDigits = (num: number | string | undefined | null): string => {
 
 export default function Footer() {
   const [settings, setSettings] = useState(storage.getSettings());
+  const [adminUser, setAdminUser] = useState(() => getAdminSession());
 
   useEffect(() => {
     const handleSettingsChange = () => {
       setSettings(storage.getSettings());
     };
+    const handleAdminAuthChange = () => {
+      setAdminUser(getAdminSession());
+    };
     window.addEventListener('kowsar_site_settings_changed', handleSettingsChange);
-    return () => window.removeEventListener('kowsar_site_settings_changed', handleSettingsChange);
+    window.addEventListener(ADMIN_AUTH_CHANGED_EVENT, handleAdminAuthChange);
+    return () => {
+      window.removeEventListener('kowsar_site_settings_changed', handleSettingsChange);
+      window.removeEventListener(ADMIN_AUTH_CHANGED_EVENT, handleAdminAuthChange);
+    };
   }, []);
 
   return (
@@ -75,7 +85,13 @@ export default function Footer() {
                 </li>
               ))}
               <li className="pt-2 border-t border-blue-900/50">
-                <a href="/admin/login" className="hover:text-white hover:translate-x-[-4px] transition-all block font-bold text-blue-400">ورود به پنل مدیریت</a>
+                <Link 
+                  to="/admin" 
+                  className="hover:text-white hover:translate-x-[-4px] transition-all flex items-center gap-1.5 font-bold text-blue-400"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>{adminUser ? `پنل مدیریت (${adminUser.name})` : 'ورود به پنل مدیریت'}</span>
+                </Link>
               </li>
             </ul>
           </div>

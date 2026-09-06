@@ -6,6 +6,7 @@
 import { useEffect, Suspense, lazy, ComponentType } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { storage } from './lib/storage';
+import { setupGlobalInactivityTracker } from './lib/adminSession';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -85,6 +86,7 @@ const AdminPanelCustomization = lazyRetry(() => import('./pages/admin/PanelCusto
 const AdminPortalCustomization = lazyRetry(() => import('./pages/admin/PortalCustomization'));
 
 const AdminPresentation = lazyRetry(() => import('./pages/admin/PresentationManager'));
+const AdminMedia = lazyRetry(() => import('./pages/admin/ImageFileManager'));
 
 export default function App() {
   useEffect(() => {
@@ -99,6 +101,9 @@ export default function App() {
     ]);
 
     
+    // ناظر خودکار عدم فعالیت پنل مدیریت (خروج امن پس از ۱۰ دقیقه بی‌حرکتی)
+    const cleanupInactivityTracker = setupGlobalInactivityTracker();
+
     // Cross-tab synchronization
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'kowsar_site_settings' || e.key === 'kowsar_portal_settings') {
@@ -107,7 +112,10 @@ export default function App() {
     };
     
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      cleanupInactivityTracker();
+    };
   }, []);
 
   return (
@@ -120,6 +128,8 @@ export default function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="gallery" element={<AdminGallery />} />
+          <Route path="media" element={<AdminMedia />} />
+          <Route path="images" element={<AdminMedia />} />
           <Route path="registrations" element={<AdminRegistrations />} />
           <Route path="students" element={<AdminStudentManager />} />
           <Route path="student-profiles" element={<AdminStudentProfileManager />} />

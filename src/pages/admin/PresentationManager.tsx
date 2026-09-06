@@ -11,16 +11,14 @@ import {
   storage, 
   PresentationSection, 
   PresentationFrameStyle, 
-  defaultPresentationSections,
-  PresentationOverlayPosition,
-  PresentationOverlayStyle
+  defaultPresentationSections
 } from '../../lib/storage';
 import { toPersianDigits } from '../../lib/utils';
 import { uploadFileToServer, optimizeImageToWebP } from '../../lib/uploadHelper';
 import ImageCropperModal from '../../components/admin/ImageCropperModal';
 import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 
-// Available Frame Designs for Presentation Section
+// Available Frame Designs for Presentation Section - 3 Simple Clean Styles
 const PRESENTATION_FRAME_STYLES: {
   id: PresentationFrameStyle;
   title: string;
@@ -29,151 +27,25 @@ const PRESENTATION_FRAME_STYLES: {
   gradient: string;
 }[] = [
   {
-    id: 'floating-isometric',
-    title: 'کارت سه‌بعدی شناور (پیش‌فرض)',
-    desc: 'کارت لبه‌گرد با عمق فضایی و سایه لوکس مشکی',
-    badge: 'محبوب',
-    gradient: 'from-blue-600 to-indigo-700'
-  },
-  {
-    id: 'laptop-mockup',
-    title: 'قاب لپ‌تاپ و مانیتور (Laptop Mockup)',
-    desc: 'قاب مانیتور رتینا مدرن با نوار مرورگر و پایه آلومینیومی شیک',
-    badge: 'جدید',
+    id: 'rounded-standard',
+    title: 'قاب استاندارد مینیمال',
+    desc: 'طراحی ساده، تمیز و بزرگ با لبه‌های ملایم و سایه استاندارد عمیق',
+    badge: 'پیش‌فرض',
     gradient: 'from-slate-700 to-slate-900'
-  },
-  {
-    id: 'phone-mockup',
-    title: 'قاب تلفن همراه هوشمند (Phone Mockup)',
-    desc: 'فریم آیفون و گوشی مدرن با داینامیک آیلند و حاشیه تیتانیومی',
-    badge: 'جدید',
-    gradient: 'from-indigo-600 to-violet-900'
-  },
-  {
-    id: 'persian-illumination',
-    title: 'تذهیب و اسلیمی ایرانی (Persian Royal)',
-    desc: 'قاب اصیل ایرانی با نقوش زرین، حاشیه لاجوردی و طرح اسلیمی شاهانه',
-    badge: 'اصیل',
-    gradient: 'from-blue-700 via-amber-500 to-blue-900'
-  },
-  {
-    id: 'crimson-ruby',
-    title: 'یاقوت سرخ و آتشین (Crimson Ruby)',
-    desc: 'کادر یاقوتی فاخر با هاله سرخ آتشین و حاشیه نورانی طلایی',
-    badge: 'لوکس',
-    gradient: 'from-rose-600 to-red-800'
-  },
-  {
-    id: 'aurora-galaxy',
-    title: 'شفق قطبی و کهکشان (Aurora Galaxy)',
-    desc: 'هاله سحرانگیز کیهانی با درخشش بنفش و نیلی فضایی',
-    badge: 'کهکشانی',
-    gradient: 'from-purple-600 via-fuchsia-600 to-indigo-800'
-  },
-  {
-    id: 'minimal-card-shadow',
-    title: 'کارت سفید مینیمال (Soft Neumorphic)',
-    desc: 'کادر تمیز و لطیف سفید با سایه نئومورفیک نرم و استایل ژورنالی',
-    badge: 'مینیمال',
-    gradient: 'from-slate-100 to-slate-300'
   },
   {
     id: 'glass-card',
-    title: 'شیشه‌ای مدرن (Glassmorphism)',
-    desc: 'پس‌زمینه مات و هاله نئونی چندرنگ با انعکاس نور',
+    title: 'قاب شیشه‌ای مدرن (Glass)',
+    desc: 'حاشیه بلورین شیشه‌ای مات همراه با هاله نوری ملایم در پس‌زمینه',
     badge: 'مدرن',
-    gradient: 'from-cyan-500 to-blue-600'
+    gradient: 'from-blue-600 to-indigo-600'
   },
   {
     id: 'golden-gallery',
-    title: 'قاب زرین دانشگاهی (Golden Gallery)',
-    desc: 'حاشیه طلایی فاخر با نشان افتخار آکادمیک و شأن دانشگاه',
+    title: 'قاب طلایی لوکس (Gold)',
+    desc: 'کادر طلایی شیک آکادمیک برای جلوه رسمی و شاخص بخش معرفی مرکز',
     badge: 'ویژه',
     gradient: 'from-amber-400 to-yellow-600'
-  },
-  {
-    id: 'emerald-prestige',
-    title: 'قاب فیروزه‌ای و زمردین (Emerald Prestige)',
-    desc: 'حاشیه نفیس زمرد و فیروزه خلیج فارس با نقوش اصیل و کتیبه زرین',
-    badge: 'نفیس',
-    gradient: 'from-emerald-500 to-teal-700'
-  },
-  {
-    id: 'ribbon-spotlight',
-    title: 'قاب افتخارات و رتبه برتر (Ribbon Spotlight)',
-    desc: 'نوار روبان ابریشمی زرین با مدال افتخار و نور متمرکز استیج',
-    badge: 'افتخارات',
-    gradient: 'from-rose-600 to-amber-500'
-  },
-  {
-    id: 'cinematic-glow',
-    title: 'سینمایی عریض (Cinematic Glow)',
-    desc: 'کادر کشیده فوق‌عریض با نور ملایم آبی و نقطه سبز زنده',
-    badge: 'سینمایی',
-    gradient: 'from-blue-700 to-purple-800'
-  },
-  {
-    id: 'stamp-vintage',
-    title: 'تمبر و سند تاریخی (Vintage Stamp)',
-    desc: 'کادر دندانه‌دار تمبر تاریخی دانشگاه با مُهر رسمی برجسته و کادر اصیل',
-    badge: 'اصیل',
-    gradient: 'from-amber-700 to-stone-800'
-  },
-  {
-    id: 'magazine-cover',
-    title: 'جلد ژورنال علمی (Academic Journal)',
-    desc: 'سبک صفحه اول مجله علمی پژوهشی با بارکد و شماره شاپا ISSN اختصاصی',
-    badge: 'پژوهشی',
-    gradient: 'from-blue-800 to-indigo-950'
-  },
-  {
-    id: 'blueprint-arch',
-    title: 'نقشه مهندسی (Blueprint Engineering)',
-    desc: 'شبکه شطرنجی نقشه‌کشی مهندسی، مختصات CAD و مقیاس فنی دانشگاهی',
-    badge: 'مهندسی',
-    gradient: 'from-sky-600 to-blue-800'
-  },
-  {
-    id: 'neon-prism',
-    title: 'طیف نوری نئونی (Neon Prism)',
-    desc: 'هاله شفق قطبی درخشان با بازتاب کریستالی و گرادیانت متغیر نوری',
-    badge: 'نئونی',
-    gradient: 'from-fuchsia-600 to-cyan-500'
-  },
-  {
-    id: 'geometric-cut',
-    title: 'برش هندسی مورب (Geometric Cut)',
-    desc: 'کادر با چرخش زاویه‌دار و نشانگر قطب‌نما',
-    badge: 'خلاقانه',
-    gradient: 'from-rose-500 to-indigo-600'
-  },
-  {
-    id: 'academic-slate',
-    title: 'پرتال رسمی دانشگاهی (Academic Slate)',
-    desc: 'قاب مشکی مهندسی با نشانگرهای سه‌گانه و نوار عنوان',
-    badge: 'سازمانی',
-    gradient: 'from-slate-700 to-slate-900'
-  },
-  {
-    id: 'cyber-tech',
-    title: 'سایبر و فناوری (Cyber Tech HUD)',
-    desc: 'گوشه‌های خط‌کشی‌شده فیروزه‌ای دیجیتال و پالس نوری',
-    badge: 'تکنولوژی',
-    gradient: 'from-cyan-600 to-emerald-600'
-  },
-  {
-    id: 'minimal-polaroid',
-    title: 'پولاروید یادگاری (Minimal Polaroid)',
-    desc: 'قاب عکاسی کلاسیک با سنجاق قرمز رنگ و تگ اختصاصی',
-    badge: 'صمیمی',
-    gradient: 'from-slate-200 to-slate-400'
-  },
-  {
-    id: 'rounded-standard',
-    title: 'کلاسیک استاندارد (Standard Rounded)',
-    desc: 'قاب ساده و تمیز با لبه‌های ملایم',
-    badge: 'ساده',
-    gradient: 'from-slate-600 to-slate-800'
   }
 ];
 
@@ -189,26 +61,6 @@ const PRESENTATION_COLOR_PALETTES = [
   { id: 'gradient', label: 'شفق نئونی سه‌بعدی', bg: 'from-fuchsia-950 via-indigo-950 to-cyan-950', border: 'border-fuchsia-500', hex: '#c026d3' },
   { id: 'dark', label: 'تاریک استاندارد', bg: 'from-slate-900 via-slate-950 to-slate-900', border: 'border-slate-600', hex: '#1e293b' },
   { id: 'light', label: 'روشن و مینیمال', bg: 'from-slate-100 via-white to-slate-200', border: 'border-slate-300', hex: '#f8fafc' },
-];
-
-// Preset Overlay Positions for Image Text Overlays
-const OVERLAY_POSITIONS: { id: PresentationOverlayPosition; title: string; desc: string }[] = [
-  { id: 'top-right', title: 'بالا - راست', desc: 'پیش‌فرض' },
-  { id: 'top-left', title: 'بالا - چپ', desc: 'گوشه چپ بالا' },
-  { id: 'top-center', title: 'بالا - وسط', desc: 'مرکز نوار بالایی' },
-  { id: 'bottom-right', title: 'پایین - راست', desc: 'گوشه راست پایین' },
-  { id: 'bottom-left', title: 'پایین - چپ', desc: 'گوشه چپ پایین' },
-  { id: 'bottom-center', title: 'پایین - وسط', desc: 'مرکز نوار پایینی' },
-];
-
-// Preset Overlay Styles for Image Text Overlays
-const OVERLAY_STYLES: { id: PresentationOverlayStyle; title: string; previewClass: string }[] = [
-  { id: 'badge', title: 'نشان تیره استاندارد', previewClass: 'bg-slate-900 text-white border-slate-700' },
-  { id: 'glass', title: 'شیشه‌ای مات بلورین', previewClass: 'bg-white/20 backdrop-blur-md text-white border-white/40' },
-  { id: 'gold', title: 'کتیبه زرین فاخر', previewClass: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black border-amber-200' },
-  { id: 'dark', title: 'تیره شیک و شب', previewClass: 'bg-slate-950 text-white border-slate-800' },
-  { id: 'neon', title: 'نئونی سایبرپانک', previewClass: 'bg-slate-950 text-cyan-300 border-cyan-400 font-mono' },
-  { id: 'minimal', title: 'ساده و مینیمال', previewClass: 'bg-black/50 text-white border-white/20' },
 ];
 
 // Preset sample photos suitable for university presentation / about sections
@@ -790,18 +642,8 @@ export default function PresentationManager() {
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100">
                       <Box className="w-3 h-3" />
                       طرح قاب: {
-                        PRESENTATION_FRAME_STYLES.find(f => f.id === (section.frameStyle || 'floating-isometric'))?.title.split(' ')[0] || 'شناور'
+                        PRESENTATION_FRAME_STYLES.find(f => f.id === (section.frameStyle || 'rounded-standard'))?.title || 'استاندارد'
                       }
-                    </span>
-                  )}
-                  {section.image && (
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                      section.showOverlayText !== false
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-slate-100 text-slate-500 border-slate-200'
-                    }`}>
-                      <Type className="w-3 h-3" />
-                      متن روی تصویر: {section.showOverlayText !== false ? 'فعال' : 'غیرفعال'}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold">
@@ -1179,260 +1021,73 @@ export default function PresentationManager() {
                     )}
                   </div>
 
-                  {/* DEDICATED FRAME DESIGN CUSTOMIZATION */}
-                  <div className="md:col-span-2 bg-gradient-to-br from-purple-50/50 via-indigo-50/30 to-slate-50 p-5 rounded-3xl border border-purple-100 shadow-xs space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100/70 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-sm">
-                          <Box className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                            انتخاب و شخصی‌سازی طرح قاب تصویر (Frame Style)
-                            <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                              {PRESENTATION_FRAME_STYLES.length} نمونه قاب متنوع و پیشرفته
-                            </span>
-                          </h4>
-                          <p className="text-[11px] text-slate-500">
-                            طرح ظاهری قاب، جلوه‌های نوری، حاشیه طلایی یا پرتال رسمی تصویر را انتخاب کنید
-                          </p>
-                        </div>
+                  {/* DEDICATED FRAME DESIGN - 3 SIMPLE STYLES */}
+                  <div className="md:col-span-2 bg-gradient-to-br from-indigo-50/40 via-purple-50/30 to-slate-50 p-5 rounded-3xl border border-indigo-100 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2.5 border-b border-indigo-100/70 pb-3">
+                      <div className="w-9 h-9 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                        <Box className="w-5 h-5" />
                       </div>
-
-                      {/* Custom Badge Text on Frame */}
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <span className="text-[11px] font-bold text-slate-600 shrink-0">متن نشان روی قاب:</span>
-                        <input
-                          type="text"
-                          placeholder="مثال: دانشگاه علمی کاربردی کوثر"
-                          value={editingSection.frameBadgeText || ''}
-                          onChange={e => setEditingSection({ ...editingSection, frameBadgeText: e.target.value })}
-                          className="bg-white border border-purple-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-purple-200"
-                        />
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                          طرح قاب تصویر معرفی مرکز
+                          <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                            ۳ طرح ساده و بهینه
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          یکی از ۳ حالت نمایش ساده و بزرگ را برای نمایش باکیفیت تصویر انتخاب کنید
+                        </p>
                       </div>
                     </div>
 
-                    {/* Frame Selector Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {/* Simple Frame Selector Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                       {PRESENTATION_FRAME_STYLES.map((frame) => {
-                        const isSelected = (editingSection.frameStyle || 'floating-isometric') === frame.id;
+                        const isSelected = (editingSection.frameStyle || 'rounded-standard') === frame.id;
                         return (
                           <div
                             key={frame.id}
                             onClick={() => setEditingSection({ ...editingSection, frameStyle: frame.id })}
-                            className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-2 relative group ${
+                            className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 relative group ${
                               isSelected
-                                ? 'border-purple-600 bg-white shadow-md ring-2 ring-purple-200'
-                                : 'border-slate-200 bg-white/70 hover:bg-white hover:border-purple-300'
+                                ? 'border-indigo-600 bg-white shadow-md ring-2 ring-indigo-200'
+                                : 'border-slate-200 bg-white/80 hover:bg-white hover:border-indigo-300'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className={`w-3.5 h-3.5 rounded-md bg-gradient-to-br ${frame.gradient} shadow-xs`} />
+                                <div className={`w-4 h-4 rounded-lg bg-gradient-to-br ${frame.gradient} shadow-xs`} />
                                 <span className="text-xs font-bold text-slate-800">{frame.title}</span>
                               </div>
-                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
-                                isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
+                                isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
                               }`}>
                                 {frame.badge}
                               </span>
                             </div>
 
-                            <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
                               {frame.desc}
                             </p>
 
-                            {isSelected && (
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-purple-600 pt-1 border-t border-purple-50">
-                                <Check className="w-3.5 h-3.5" />
-                                <span>انتخاب شده برای نمایش</span>
-                              </div>
-                            )}
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
+                              {isSelected ? (
+                                <span className="flex items-center gap-1 text-indigo-600">
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  انتخاب شده
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 group-hover:text-slate-600">
+                                  کلیک برای انتخاب
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* DEDICATED OVERLAY TEXT CUSTOMIZATION & TOGGLE SECTION */}
-                  <div className="md:col-span-2 bg-gradient-to-br from-amber-50/40 via-indigo-50/20 to-slate-50 p-5 rounded-3xl border border-amber-200/80 shadow-xs space-y-4">
-                    {/* Header with Master Toggle */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200/60 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shadow-sm transition-colors ${
-                          editingSection.showOverlayText !== false ? 'bg-amber-500 text-slate-950' : 'bg-slate-200 text-slate-500'
-                        }`}>
-                          <Type className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                            شخصی‌سازی و تنظیم متن‌های روی تصویر (Overlay Texts)
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              editingSection.showOverlayText !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                            }`}>
-                              {editingSection.showOverlayText !== false ? 'فعال و نمایان' : 'غیرفعال (تصویر خام)'}
-                            </span>
-                          </h4>
-                          <p className="text-[11px] text-slate-500">
-                            امکان ویرایش متن‌ها، افزودن زیرعنوان، انتخاب موقعیت قرارگیری روی عکس و فعال یا غیرفعال‌سازی کامل
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Master Switch */}
-                      <div className="flex items-center gap-2.5 bg-white px-3.5 py-1.5 rounded-2xl border border-slate-200 shadow-xs shrink-0">
-                        <span className="text-xs font-bold text-slate-700">
-                          {editingSection.showOverlayText !== false ? 'نمایش متن‌ها: فعال' : 'نمایش متن‌ها: غیرفعال'}
-                        </span>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={editingSection.showOverlayText !== false}
-                            onChange={e => setEditingSection({ ...editingSection, showOverlayText: e.target.checked })}
-                            className="sr-only peer"
-                          />
-                          <div className="w-10 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                        </label>
-                      </div>
-                    </div>
-
-                    {editingSection.showOverlayText === false ? (
-                      <div className="p-4 bg-white/80 rounded-2xl border border-dashed border-slate-300 text-center text-slate-500 text-xs py-6">
-                        <EyeOff className="w-7 h-7 text-slate-400 mx-auto mb-1.5 opacity-60" />
-                        <p className="font-bold text-slate-700">متن‌ها و برچسب‌های روی تصویر در این بخش کاملاً غیرفعال هستند</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">تصویر بدون هیچ‌گونه متن، نشان یا واترمارک به‌صورت ساده و خالص نمایش داده می‌شود.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {/* Text Inputs: Primary Badge & Secondary Subtitle */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                              <span>متن نشان اصلی روی تصویر (Primary Badge)</span>
-                              <span className="text-[10px] text-slate-400 font-normal">عنوان برجسته</span>
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="مثال: دانشگاه علمی کاربردی کوثر یا مهارت و کارآفرینی"
-                              value={editingSection.frameBadgeText || ''}
-                              onChange={e => setEditingSection({ ...editingSection, frameBadgeText: e.target.value })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-amber-200 focus:border-amber-400 transition-all shadow-xs"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                              <span>متن دوم یا زیرعنوان روی تصویر (Secondary Overlay)</span>
-                              <span className="text-[10px] text-slate-400 font-normal">اختیاری</span>
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="مثال: پیشرو در آموزش مهارت‌محور یا نگین آموزش عالی"
-                              value={editingSection.overlaySubtitle || ''}
-                              onChange={e => setEditingSection({ ...editingSection, overlaySubtitle: e.target.value })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-amber-200 focus:border-amber-400 transition-all shadow-xs"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Position Selector */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            موقعیت قرارگیری نشان بر روی تصویر:
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                            {OVERLAY_POSITIONS.map(pos => {
-                              const isSelected = (editingSection.overlayPosition || 'top-right') === pos.id;
-                              return (
-                                <button
-                                  key={pos.id}
-                                  type="button"
-                                  onClick={() => setEditingSection({ ...editingSection, overlayPosition: pos.id })}
-                                  className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs ring-2 ring-amber-200'
-                                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  <span>{pos.title}</span>
-                                  <span className={`text-[9px] ${isSelected ? 'text-slate-900 font-normal' : 'text-slate-400'}`}>{pos.desc}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Style Selector */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            قالب و سبک گرافیکی نشان روی تصویر:
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                            {OVERLAY_STYLES.map(style => {
-                              const isSelected = (editingSection.overlayStyle || 'badge') === style.id;
-                              return (
-                                <button
-                                  key={style.id}
-                                  type="button"
-                                  onClick={() => setEditingSection({ ...editingSection, overlayStyle: style.id })}
-                                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-between gap-1.5 cursor-pointer ${
-                                    isSelected
-                                      ? 'border-amber-600 bg-amber-50/50 shadow-xs ring-2 ring-amber-200'
-                                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                                  }`}
-                                >
-                                  <div className={`px-2 py-0.5 rounded-md text-[10px] border shadow-xs ${style.previewClass}`}>
-                                    نمونه نشان
-                                  </div>
-                                  <span className="text-[11px] text-slate-700 mt-1">{style.title}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Live Mini Preview */}
-                        <div className="p-3 bg-white rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-amber-500" />
-                            <span className="text-xs font-bold text-slate-800">پیش‌نمایش زنده چیدمان روی تصویر:</span>
-                          </div>
-                          <div className="relative w-full sm:w-72 h-24 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 shadow-inner flex items-center justify-center">
-                            {editingSection.image ? (
-                              <img src={editingSection.image} alt="پیش‌نمایش" className="w-full h-full object-cover opacity-70" />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-tr from-indigo-900 to-slate-900" />
-                            )}
-                            {/* Render badge according to position & style */}
-                            <div className={`absolute z-10 flex flex-col gap-0.5 max-w-[90%] pointer-events-none ${
-                              editingSection.overlayPosition === 'top-left' ? 'top-2 left-2 items-start text-left' :
-                              editingSection.overlayPosition === 'top-center' ? 'top-2 left-1/2 -translate-x-1/2 items-center text-center' :
-                              editingSection.overlayPosition === 'bottom-right' ? 'bottom-2 right-2 items-end text-right' :
-                              editingSection.overlayPosition === 'bottom-left' ? 'bottom-2 left-2 items-start text-left' :
-                              editingSection.overlayPosition === 'bottom-center' ? 'bottom-2 left-1/2 -translate-x-1/2 items-center text-center' :
-                              'top-2 right-2 items-end text-right'
-                            }`}>
-                              <div className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold shadow-md truncate ${
-                                editingSection.overlayStyle === 'gold' ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 border-amber-200' :
-                                editingSection.overlayStyle === 'glass' ? 'bg-white/25 backdrop-blur-md text-white border-white/40' :
-                                editingSection.overlayStyle === 'neon' ? 'bg-slate-950 text-cyan-300 border-cyan-400 font-mono' :
-                                editingSection.overlayStyle === 'dark' ? 'bg-slate-950 text-white border-slate-800' :
-                                editingSection.overlayStyle === 'minimal' ? 'bg-black/60 text-white border-white/20' :
-                                'bg-slate-900/90 text-white border-slate-700'
-                              }`}>
-                                {editingSection.frameBadgeText || editingSection.subtitle || 'دانشگاه علمی کاربردی کوثر'}
-                              </div>
-                              {editingSection.overlaySubtitle && (
-                                <div className="bg-black/75 text-white/95 text-[9px] px-1.5 py-0.5 rounded border border-white/15 truncate">
-                                  {editingSection.overlaySubtitle}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-2">سبک انیمیشن متن</label>
                     <select

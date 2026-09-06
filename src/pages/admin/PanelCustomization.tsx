@@ -34,7 +34,8 @@ import {
   Search,
   Undo2,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Clock
 } from 'lucide-react';
 import { storage, AdminPanelConfig, defaultPanelConfig } from '../../lib/storage';
 
@@ -585,6 +586,42 @@ export default function AdminPanelCustomization() {
               >
                 <div className="bg-white w-4 h-4 rounded-full shadow-md transform transition-transform" />
               </button>
+            </div>
+
+            {/* Inactivity Session Timeout */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <div className="font-bold text-sm text-slate-800">مدت زمان خروج خودکار (عدم فعالیت)</div>
+                    <div className="text-xs text-slate-500">اگر در این مدت تعاملی نداشته باشید، برای حفظ امنیت به صفحه ورود هدایت می‌شوید</div>
+                  </div>
+                </div>
+                <span className="text-xs font-black bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg">
+                  {config.sessionTimeoutMinutes || 10} دقیقه
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 pt-1">
+                {[5, 10, 15, 30].map(mins => {
+                  const isSelected = (config.sessionTimeoutMinutes || 10) === mins;
+                  return (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => handleUpdate({ sessionTimeoutMinutes: mins })}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {mins} دقیقه
+                      {mins === 10 && <span className="block text-[10px] opacity-80">(استاندارد)</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

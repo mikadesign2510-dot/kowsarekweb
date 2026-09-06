@@ -316,6 +316,7 @@ export interface AdminPanelConfig {
   headerTitle: string;
   customMenuTitles?: Record<string, string>;
   customMenuOrder?: string[];
+  sessionTimeoutMinutes?: number; // Inactivity timeout in minutes (e.g. 5, 10, 15), default 10
 }
 
 export interface Registration {
@@ -514,7 +515,8 @@ export const defaultPanelConfig: AdminPanelConfig = {
   showBadges: true,
   headerTitle: 'سامانه مدیریت یکپارچه مرکز آموزش عالی کوثر کاکی',
   customMenuTitles: {},
-  customMenuOrder: []
+  customMenuOrder: [],
+  sessionTimeoutMinutes: 10
 };
 
 export const defaultForms: FormItem[] = [
@@ -1188,27 +1190,10 @@ export interface FinancialReceipt {
 }
 
 export type PresentationFrameStyle = 
-  | 'glass-card'          // شیشه‌ای مدرن با درخشش نئونی
-  | 'floating-isometric'   // کارت سه‌بعدی شناور ایزومتریک با سایه عمیق
-  | 'golden-gallery'      // قاب زرین لوکس دانشگاهی با کادر طلایی
-  | 'geometric-cut'       // قاب مورب با کات هندسی گوشه‌ها
-  | 'cinematic-glow'      // قاب سینمایی لبه‌گرد با هاله نوری گرادیانت
-  | 'minimal-polaroid'    // قاب پولاروید با برچسب و سنجاق یادداشت
-  | 'academic-slate'      // قاب مدرن سازمانی و دانشگاهی با نوار وضعیت
-  | 'cyber-tech'          // قاب تکنولوژی با گوشه‌های دیجیتال و HUD
-  | 'emerald-prestige'    // قاب فیروزه‌ای و زمردین خلیج فارس با حاشیه نفیس
-  | 'stamp-vintage'       // تمبر و سند تاریخی یادبود دانشگاه با مهر رسمی
-  | 'ribbon-spotlight'    // قاب افتخارات جشنواره با روبان زرین
-  | 'magazine-cover'      // جلد مجله علمی دانشگاهی با بارکد و تیتر
-  | 'blueprint-arch'      // نقشه مهندسی و معماری آکادمیک با شبکه خط‌کش
-  | 'neon-prism'          // طیف نوری نئونی چندوجهی با هاله شفق قطبی
-  | 'laptop-mockup'       // قاب مانیتور و لپ‌تاپ فوق‌پیشرفته با نوار ابزار و پایه متالیک
-  | 'phone-mockup'        // قاب گوشی هوشمند مدرن با جزیره پویا و بدنه تیتانیوم
-  | 'persian-illumination'// قاب تذهیب و اسلیمی شاهانه ایرانی با نقوش زرین
-  | 'crimson-ruby'        // قاب یاقوت سرخ و آتشین با حاشیه مخملی
-  | 'aurora-galaxy'       // قاب کهکشان و شفق قطبی با هاله بنفش و نیلی
-  | 'minimal-card-shadow' // کارت سفید مینیمال با حاشیه لطیف و سایه نرم نئومورفیک
-  | 'rounded-standard';   // قاب استاندارد کلاسیک
+  | 'rounded-standard'    // قاب استاندارد کلاسیک (پیش‌فرض)
+  | 'glass-card'          // شیشه‌ای مدرن با انعکاس ملایم
+  | 'golden-gallery'      // قاب طلایی شیک آکادمیک
+  | 'floating-isometric'; // پشتیبانی سازگار با نسخه‌های قبلی
 
 export type PresentationOverlayPosition = 
   | 'top-right' 
@@ -1239,7 +1224,6 @@ export interface PresentationSection {
   frameStyle?: PresentationFrameStyle;
   frameAccentColor?: string;
   frameBadgeText?: string;
-  // شخصی‌سازی کامل متن‌ها و نشان‌های روی عکس
   showOverlayText?: boolean;
   overlaySubtitle?: string;
   overlayPosition?: PresentationOverlayPosition;
