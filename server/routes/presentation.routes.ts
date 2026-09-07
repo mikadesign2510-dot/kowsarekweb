@@ -31,7 +31,11 @@ router.get('/', async (req: Request, res: Response) => {
       animationDuration: parseFloat(row.animation_duration) || 0.8,
       animationEasing: row.animation_easing || 'easeOut',
       theme: row.theme || 'light',
-      isVisible: row.is_visible !== false
+      isVisible: row.is_visible !== false,
+      imagePosition: row.image_position || 'left',
+      textAlignment: row.text_alignment || 'right',
+      contentRatio: row.content_ratio || 'balanced',
+      verticalAlign: row.vertical_align || 'center'
     }));
 
     res.json({ success: true, data: sections });
@@ -73,8 +77,9 @@ router.post('/sync', async (req: Request, res: Response) => {
           animation_style, image_animation_style, frame_style,
           frame_accent_color, frame_badge_text,
           show_overlay_text, overlay_subtitle, overlay_position, overlay_style,
-          animation_duration, animation_easing, theme, is_visible, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, CURRENT_TIMESTAMP)
+          animation_duration, animation_easing, theme, is_visible,
+          image_position, text_alignment, content_ratio, vertical_align, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, CURRENT_TIMESTAMP)
         ON CONFLICT (id) DO UPDATE SET
           "order" = EXCLUDED."order",
           title = EXCLUDED.title,
@@ -95,6 +100,10 @@ router.post('/sync', async (req: Request, res: Response) => {
           animation_easing = EXCLUDED.animation_easing,
           theme = EXCLUDED.theme,
           is_visible = EXCLUDED.is_visible,
+          image_position = EXCLUDED.image_position,
+          text_alignment = EXCLUDED.text_alignment,
+          content_ratio = EXCLUDED.content_ratio,
+          vertical_align = EXCLUDED.vertical_align,
           updated_at = CURRENT_TIMESTAMP`,
         [
           sectionId,
@@ -116,7 +125,11 @@ router.post('/sync', async (req: Request, res: Response) => {
           s.animationDuration || 0.8,
           s.animationEasing || 'easeOut',
           s.theme || 'light',
-          s.isVisible !== false
+          s.isVisible !== false,
+          s.imagePosition || 'left',
+          s.textAlignment || 'right',
+          s.contentRatio || 'balanced',
+          s.verticalAlign || 'center'
         ]
       );
     }
@@ -142,8 +155,9 @@ router.post('/', async (req: Request, res: Response) => {
         animation_style, image_animation_style, frame_style,
         frame_accent_color, frame_badge_text,
         show_overlay_text, overlay_subtitle, overlay_position, overlay_style,
-        animation_duration, animation_easing, theme, is_visible, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, CURRENT_TIMESTAMP)
+        animation_duration, animation_easing, theme, is_visible,
+        image_position, text_alignment, content_ratio, vertical_align, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, CURRENT_TIMESTAMP)
       ON CONFLICT (id) DO UPDATE SET
         "order" = EXCLUDED."order",
         title = EXCLUDED.title,
@@ -164,6 +178,10 @@ router.post('/', async (req: Request, res: Response) => {
         animation_easing = EXCLUDED.animation_easing,
         theme = EXCLUDED.theme,
         is_visible = EXCLUDED.is_visible,
+        image_position = EXCLUDED.image_position,
+        text_alignment = EXCLUDED.text_alignment,
+        content_ratio = EXCLUDED.content_ratio,
+        vertical_align = EXCLUDED.vertical_align,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *`,
       [
@@ -186,7 +204,11 @@ router.post('/', async (req: Request, res: Response) => {
         s.animationDuration || 0.8,
         s.animationEasing || 'easeOut',
         s.theme || 'light',
-        s.isVisible !== false
+        s.isVisible !== false,
+        s.imagePosition || 'left',
+        s.textAlignment || 'right',
+        s.contentRatio || 'balanced',
+        s.verticalAlign || 'center'
       ]
     );
 

@@ -1,4 +1,4 @@
-import { Menu, X, Library } from 'lucide-react';
+import { Menu, X, Library, GraduationCap } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { storage } from '../lib/storage';
@@ -22,6 +22,40 @@ export default function Navbar() {
   const displayLinks = settings.navLinks && settings.navLinks.length > 0 
     ? settings.navLinks.filter(link => link.isActive !== false) 
     : [];
+
+  const headerButtons = (settings.headerButtons || [])
+    .filter(btn => {
+      const href = (btn.href || '').trim().toLowerCase();
+      const label = (btn.label || '').trim();
+      // Exclude only admin panel entry from the public header
+      if (
+        href === '/admin' || 
+        href.startsWith('/admin/') || 
+        label.includes('ورود به پنل مدیریت') || 
+        label.includes('پنل مدیریت')
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .map(btn => {
+      // If formerly named میز خدمت or pointing to portal, display "پنل دانشجویی"
+      if (btn.label === 'میز خدمت' || btn.href === '/portal/login' || btn.href === '/portal') {
+        return { ...btn, label: 'پنل دانشجویی', href: '/portal/login' };
+      }
+      return btn;
+    });
+
+  // Guarantee that "پنل دانشجویی" is present in headerButtons
+  const resolvedHeaderButtons = [...headerButtons];
+  if (!resolvedHeaderButtons.some(b => b.href === '/portal/login' || b.label === 'پنل دانشجویی')) {
+    resolvedHeaderButtons.unshift({
+      id: 'student-portal-btn',
+      label: 'پنل دانشجویی',
+      href: '/portal/login',
+      style: 'outline'
+    });
+  }
 
   const isLinkActive = (href: string) => {
     if (href === '/' && location.pathname === '/') return true;
@@ -105,32 +139,37 @@ export default function Navbar() {
               })}
             </div>
             
-            <div className="flex items-center gap-3 mr-2 border-r border-slate-200 pr-5 xl:pr-6">
-              {settings.headerButtons?.map(btn => {
-                const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');
-                const className = btn.style === 'primary'
-                  ? "bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.2)] transition-all transform hover:-translate-y-0.5 text-sm whitespace-nowrap"
-                  : "bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 font-bold px-4 py-2.5 rounded-xl transition-all text-sm whitespace-nowrap border border-slate-200";
-                
-                if (isExternal) {
+            {resolvedHeaderButtons.length > 0 && (
+              <div className="flex items-center gap-3 mr-2 border-r border-slate-200 pr-5 xl:pr-6">
+                {resolvedHeaderButtons.map(btn => {
+                  const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');
+                  const isStudentPortal = btn.href === '/portal/login' || btn.href.startsWith('/portal') || btn.label.includes('دانشجو');
+                  const className = btn.style === 'primary'
+                    ? "inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.2)] transition-all transform hover:-translate-y-0.5 text-sm whitespace-nowrap"
+                    : "inline-flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-blue-50/80 text-slate-700 hover:text-blue-700 font-bold px-4 py-2.5 rounded-xl transition-all text-sm whitespace-nowrap border border-slate-200 hover:border-blue-200";
+                  
+                  if (isExternal) {
+                    return (
+                      <a key={btn.id} href={btn.href} target="_blank" rel="noopener noreferrer" className={className}>
+                        {isStudentPortal && <GraduationCap className="w-4 h-4 text-blue-600" />}
+                        <span>{btn.label}</span>
+                      </a>
+                    );
+                  }
+                  
                   return (
-                    <a key={btn.id} href={btn.href} target="_blank" rel="noopener noreferrer" className={className}>
-                      {btn.label}
-                    </a>
+                    <Link
+                      key={btn.id}
+                      to={btn.href}
+                      className={className}
+                    >
+                      {isStudentPortal && <GraduationCap className="w-4 h-4 text-blue-600" />}
+                      <span>{btn.label}</span>
+                    </Link>
                   );
-                }
-                
-                return (
-                  <Link
-                    key={btn.id}
-                    to={btn.href}
-                    className={className}
-                  >
-                    {btn.label}
-                  </Link>
-                );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -189,40 +228,45 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <div className="pt-2 mt-1 border-t border-slate-100 px-1 space-y-2">
-                {settings.headerButtons?.map(btn => {
-                  const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');
-                  const className = btn.style === 'primary'
-                    ? "block text-center w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.2)] transition-all"
-                    : "block text-center w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-3 rounded-xl transition-all";
-                  
-                  if (isExternal) {
+              {resolvedHeaderButtons.length > 0 && (
+                <div className="pt-2 mt-1 border-t border-slate-100 px-1 space-y-2">
+                  {resolvedHeaderButtons.map(btn => {
+                    const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');
+                    const isStudentPortal = btn.href === '/portal/login' || btn.href.startsWith('/portal') || btn.label.includes('دانشجو');
+                    const className = btn.style === 'primary'
+                      ? "flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.2)] transition-all"
+                      : "flex items-center justify-center gap-2 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-3 rounded-xl transition-all";
+                    
+                    if (isExternal) {
+                      return (
+                        <a
+                          key={btn.id}
+                          href={btn.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setIsOpen(false)}
+                          className={className}
+                        >
+                          {isStudentPortal && <GraduationCap className="w-4 h-4 text-indigo-600" />}
+                          <span>{btn.label}</span>
+                        </a>
+                      );
+                    }
+
                     return (
-                      <a
+                      <Link
                         key={btn.id}
-                        href={btn.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        to={btn.href}
                         onClick={() => setIsOpen(false)}
                         className={className}
                       >
-                        {btn.label}
-                      </a>
+                        {isStudentPortal && <GraduationCap className="w-4 h-4 text-indigo-600" />}
+                        <span>{btn.label}</span>
+                      </Link>
                     );
-                  }
-
-                  return (
-                    <Link
-                      key={btn.id}
-                      to={btn.href}
-                      onClick={() => setIsOpen(false)}
-                      className={className}
-                    >
-                      {btn.label}
-                    </Link>
-                  );
-                })}
-              </div>
+                  })}
+                </div>
+              )}
             </div>
           </motion.div>
         )}

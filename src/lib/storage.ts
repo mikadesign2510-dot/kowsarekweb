@@ -914,8 +914,8 @@ const defaultSettings: SiteSettings = {
     { id: '2', label: 'جزوه و فرم‌ها', href: '/forms', style: 'outline' }
   ],
   headerButtons: [
-    { id: '1', label: 'میز خدمت', href: '/portal/login', style: 'outline' },
-    { id: '2', label: 'هم‌آوا', href: '#', style: 'primary' }
+    { id: '1', label: 'پنل دانشجویی', href: '/portal/login', style: 'outline' },
+    { id: '2', label: 'هم‌آوا', href: 'https://hamava.uast.ac.ir', style: 'primary' }
   ],
   studyFields: [
     { id: 'f1', name: 'فناوری اطلاعات (IT)', value: 'it', degreeType: 'both', isActive: true, order: 1 },
@@ -1219,8 +1219,10 @@ export interface PresentationSection {
   content: string;
   image?: string;
   icon?: string;
-  imagePosition?: 'left' | 'right'; // 'left': تصویر در سمت چپ | 'right': تصویر در سمت راست
+  imagePosition?: 'left' | 'right' | 'top'; // 'left': تصویر در سمت چپ | 'right': تصویر در سمت راست | 'top': تصویر در بالا
   textAlignment?: 'right' | 'center' | 'justify'; // جهت تراز متن
+  contentRatio?: 'balanced' | 'text-heavy' | 'image-heavy'; // نسبت عرض محتوا و تصویر (۵۰/۵۰، ۶۰/۴۰، ۴۰/۶۰)
+  verticalAlign?: 'center' | 'start'; // تراز عمودی متن و تصویر
   animationStyle: 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'zoom' | 'flip-3d' | 'rotate-3d';
   imageAnimationStyle?: 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'zoom' | 'flip-3d' | 'rotate-3d';
   frameStyle?: PresentationFrameStyle;
@@ -1308,11 +1310,33 @@ export const storage = {
       if (!data) return defaultSettings;
       const parsed = JSON.parse(data);
       let navLinks = parsed.navLinks || defaultSettings.navLinks;
+      let headerButtons = parsed.headerButtons;
+
+      if (!headerButtons || headerButtons.length === 0) {
+        headerButtons = defaultSettings.headerButtons;
+      } else {
+        // Ensure any button for portal/login or formerly named "میز خدمت" is renamed to "پنل دانشجویی"
+        headerButtons = headerButtons.map((btn: any) => {
+          if (btn.label === 'میز خدمت' || btn.href === '/portal/login' || btn.href === '/portal' || btn.id === '1') {
+            return { ...btn, label: 'پنل دانشجویی', href: '/portal/login' };
+          }
+          return btn;
+        });
+
+        // Ensure "پنل دانشجویی" is present in headerButtons
+        if (!headerButtons.some((btn: any) => btn.label === 'پنل دانشجویی' || btn.href === '/portal/login')) {
+          headerButtons = [
+            { id: '1', label: 'پنل دانشجویی', href: '/portal/login', style: 'outline' },
+            ...headerButtons
+          ];
+        }
+      }
 
       return {
         ...defaultSettings,
         ...parsed,
         navLinks,
+        headerButtons,
         statsItems: parsed.statsItems?.length ? parsed.statsItems : defaultStats,
         featuresItems: parsed.featuresItems?.length ? parsed.featuresItems : defaultFeatures,
         studyFields: parsed.studyFields?.length ? parsed.studyFields : defaultSettings.studyFields,
@@ -3431,7 +3455,11 @@ export const storage = {
             animationDuration: item.animationDuration || 0.8,
             animationEasing: item.animationEasing || 'easeOut',
             theme: item.theme || 'light',
-            isVisible: item.isVisible !== false
+            isVisible: item.isVisible !== false,
+            imagePosition: item.imagePosition || 'left',
+            textAlignment: item.textAlignment || 'right',
+            contentRatio: item.contentRatio || 'balanced',
+            verticalAlign: item.verticalAlign || 'center'
           }));
 
           // اگر در دیتابیس داده‌ای وجود دارد، داده‌های دیتابیس معتبرترین منبع هستند

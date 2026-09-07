@@ -175,17 +175,26 @@ export default function PresentationSection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center"
+              className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 ${
+                currentSection.verticalAlign === 'start' ? 'items-start' : 'items-center'
+              }`}
             >
-              {/* Text & Details Column - Balanced 6 Cols */}
-              <div className={`lg:col-span-6 space-y-5 ${
+              {/* Text & Details Column */}
+              <div className={`space-y-5 ${
+                currentSection.imagePosition === 'top'
+                  ? 'col-span-12 order-2'
+                  : (currentSection.contentRatio === 'text-heavy'
+                      ? 'lg:col-span-7'
+                      : currentSection.contentRatio === 'image-heavy'
+                      ? 'lg:col-span-5'
+                      : 'lg:col-span-6') +
+                    (currentSection.imagePosition === 'right' ? ' order-2 lg:order-2' : ' order-1 lg:order-1')
+              } ${
                 currentSection.textAlignment === 'center' 
                   ? 'text-center' 
                   : currentSection.textAlignment === 'justify' 
                   ? 'text-justify' 
                   : 'text-right'
-              } ${
-                currentSection.imagePosition === 'right' ? 'order-2 lg:order-2' : 'order-1 lg:order-1'
               }`}>
                 {currentSection.subtitle && (
                   <div className={`inline-block bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs ${
@@ -212,8 +221,13 @@ export default function PresentationSection() {
                     بخش {currentIndex + 1} از {sections.length} معرفی مرکز
                   </span>
                   {currentSection.imagePosition === 'right' && (
-                    <span className="bg-blue-950/80 border border-blue-500/30 text-blue-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
+                    <span className="bg-amber-950/80 border border-amber-500/30 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
                       <span>چیدمان: تصویر در راست</span>
+                    </span>
+                  )}
+                  {currentSection.imagePosition === 'top' && (
+                    <span className="bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
+                      <span>چیدمان: تصویر در بالا</span>
                     </span>
                   )}
                 </div>
@@ -232,9 +246,16 @@ export default function PresentationSection() {
                 </div>
               </div>
 
-              {/* Visual Image Showcase - Balanced 6 Cols */}
-              <div className={`lg:col-span-6 ${
-                currentSection.imagePosition === 'right' ? 'order-1 lg:order-1' : 'order-2 lg:order-2'
+              {/* Visual Image Showcase */}
+              <div className={`${
+                currentSection.imagePosition === 'top'
+                  ? 'col-span-12 order-1'
+                  : (currentSection.contentRatio === 'text-heavy'
+                      ? 'lg:col-span-5'
+                      : currentSection.contentRatio === 'image-heavy'
+                      ? 'lg:col-span-7'
+                      : 'lg:col-span-6') +
+                    (currentSection.imagePosition === 'right' ? ' order-1 lg:order-1' : ' order-2 lg:order-2')
               }`}>
                 <div className="relative group rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border-2 border-slate-700/80 shadow-2xl shadow-black/60 aspect-[16/10] ring-1 ring-white/10">
                   {currentSection.image ? (

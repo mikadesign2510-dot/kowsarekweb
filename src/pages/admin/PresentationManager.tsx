@@ -216,6 +216,8 @@ export default function PresentationManager() {
       image: '',
       imagePosition: 'left',
       textAlignment: 'right',
+      contentRatio: 'balanced',
+      verticalAlign: 'center',
       animationStyle: 'fade',
       imageAnimationStyle: 'rotate-3d',
       frameStyle: 'floating-isometric',
@@ -238,6 +240,8 @@ export default function PresentationManager() {
       ...section,
       imagePosition: section.imagePosition || 'left',
       textAlignment: section.textAlignment || 'right',
+      contentRatio: section.contentRatio || 'balanced',
+      verticalAlign: section.verticalAlign || 'center',
       showOverlayText: section.showOverlayText !== false,
       overlaySubtitle: section.overlaySubtitle || '',
       overlayPosition: section.overlayPosition || 'top-right',
@@ -284,6 +288,30 @@ export default function PresentationManager() {
     setSaveStatus('saved');
     setSaveStatusMessage(`وضعیت نمایش بخش «${section.title}» به‌روزرسانی و ذخیره شد.`);
     setTimeout(() => setSaveStatus('idle'), 3000);
+  };
+
+  const handleToggleImagePosition = async (section: PresentationSection) => {
+    const nextPos: 'left' | 'right' | 'top' = 
+      section.imagePosition === 'left' ? 'right' : 
+      section.imagePosition === 'right' ? 'top' : 'left';
+      
+    const updated = sections.map(s => s.id === section.id ? { ...s, imagePosition: nextPos } : s);
+    setSections(updated);
+    storage.savePresentationSections(updated);
+    
+    try {
+      await storage.savePresentationSectionsToDB(updated);
+      setSaveStatus('saved');
+      setSaveStatusMessage(`چیدمان «${section.title}» به «${
+        nextPos === 'right' ? 'تصویر در راست | متن در چپ' : nextPos === 'top' ? 'تصویر در بالا | متن در پایین' : 'تصویر در چپ | متن در راست'
+      }» تغییر یافت و ذخیره شد.`);
+      setTimeout(() => {
+        setSaveStatus('idle');
+        setSaveStatusMessage(null);
+      }, 3500);
+    } catch (e) {
+      console.warn('DB sync error in quick toggle:', e);
+    }
   };
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
@@ -643,14 +671,28 @@ export default function PresentationManager() {
                     <Sparkles className="w-3 h-3" />
                     انیمیشن متن: {section.animationStyle}
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                    section.imagePosition === 'right' 
-                      ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                      : 'bg-blue-50 text-blue-700 border-blue-100'
-                  }`}>
-                    <ArrowLeftRight className="w-3 h-3" />
-                    {section.imagePosition === 'right' ? 'تصویر: سمت راست | متن: چپ' : 'تصویر: سمت چپ | متن: راست'}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleImagePosition(section)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shadow-xs ${
+                      section.imagePosition === 'right' 
+                        ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 hover:border-amber-400' 
+                        : section.imagePosition === 'top'
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400'
+                        : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                    }`}
+                    title="کلیک برای جابجایی سریع جایگاه تصویر و متن"
+                  >
+                    <ArrowLeftRight className="w-3 h-3 text-slate-600" />
+                    <span>
+                      {section.imagePosition === 'right' 
+                        ? 'تصویر در راست | متن در چپ' 
+                        : section.imagePosition === 'top'
+                        ? 'تصویر در بالا | متن در پایین'
+                        : 'تصویر در چپ | متن در راست'}
+                    </span>
+                    <span className="text-[9px] px-1 py-0.2 bg-black/10 rounded font-normal">تغییر</span>
+                  </button>
                   {section.image && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100">
                       <Box className="w-3 h-3" />
@@ -668,6 +710,13 @@ export default function PresentationManager() {
             </div>
 
             <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 shrink-0">
+              <button
+                onClick={() => handleToggleImagePosition(section)}
+                className="p-2.5 rounded-2xl border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="جابجایی سریع جایگاه تصویر و متن"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => handleToggleVisibility(section)}
                 className={`p-2.5 rounded-2xl border transition-colors cursor-pointer ${
@@ -1035,7 +1084,7 @@ export default function PresentationManager() {
                   </div>
 
                   {/* DEDICATED LAYOUT & POSITIONING CUSTOMIZATION */}
-                  <div className="md:col-span-2 bg-gradient-to-br from-blue-50/60 via-slate-50 to-indigo-50/40 p-5 rounded-3xl border border-blue-200/80 shadow-xs space-y-4">
+                  <div className="md:col-span-2 bg-gradient-to-br from-blue-50/60 via-slate-50 to-indigo-50/40 p-5 rounded-3xl border border-blue-200/80 shadow-xs space-y-5">
                     <div className="flex items-center justify-between border-b border-blue-200/60 pb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
@@ -1045,122 +1094,223 @@ export default function PresentationManager() {
                           <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
                             محل قرارگیری تصویر و متن (شخصی‌سازی چیدمان اسلاید)
                             <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                              قابلیت سفارشی
+                              شخصی‌سازی کامل
                             </span>
                           </h4>
                           <p className="text-[11px] text-slate-500">
-                            مشخص کنید تصویر در سمت راست یا سمت چپ قرار گیرد و تراز متن را تعیین کنید
+                            مشخص کنید تصویر در سمت راست، چپ یا بالا قرار گیرد و تناسب ستون‌ها و تراز متن را تعیین کنید
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Layout Choices Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Option 1: Image Left, Text Right (Default RTL) */}
-                      <div
-                        onClick={() => setEditingSection({ ...editingSection, imagePosition: 'left' })}
-                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 relative group ${
-                          (editingSection.imagePosition || 'left') === 'left'
-                            ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
-                            : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-800">تصویر در چپ | متن در راست</span>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
-                            (editingSection.imagePosition || 'left') === 'left' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            استاندارد فارسی
-                          </span>
-                        </div>
-
-                        {/* Visual Mini Representation of Layout */}
-                        <div className="bg-slate-100/90 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                          {/* Right side in RTL: Text lines */}
-                          <div className="flex-1 space-y-1.5 text-right">
-                            <div className="h-2 w-3/4 bg-blue-600/80 rounded-full" />
-                            <div className="h-1.5 w-full bg-slate-300 rounded-full" />
-                            <div className="h-1.5 w-5/6 bg-slate-300 rounded-full" />
-                          </div>
-                          {/* Left side in RTL: Image box */}
-                          <div className="w-16 h-12 rounded-lg bg-blue-100 border border-blue-300 flex flex-col items-center justify-center shrink-0 text-blue-600 shadow-xs">
-                            <ImageIcon className="w-4 h-4" />
-                            <span className="text-[8px] font-bold mt-0.5">تصویر</span>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                          متن در سمت راست شروع می‌شود و تصویر در سمت چپ قرار می‌گیرد (چیدمان طبیعی RTL).
-                        </p>
-
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
-                          {(editingSection.imagePosition || 'left') === 'left' ? (
-                            <span className="flex items-center gap-1 text-blue-600">
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              انتخاب شده
+                    {/* Section 1: Image Position Choices (3 Grid Options) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">
+                        موقعیت قرارگیری تصویر نسبت به متن:
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Option 1: Image Left, Text Right (Default RTL) */}
+                        <div
+                          onClick={() => setEditingSection({ ...editingSection, imagePosition: 'left' })}
+                          className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-2.5 relative group ${
+                            (editingSection.imagePosition || 'left') === 'left'
+                              ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
+                              : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800">تصویر در چپ | متن در راست</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                              (editingSection.imagePosition || 'left') === 'left' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              پیش‌فرض فارسی
                             </span>
-                          ) : (
-                            <span className="text-slate-400 group-hover:text-slate-600">
-                              کلیک برای انتخاب
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Option 2: Image Right, Text Left */}
-                      <div
-                        onClick={() => setEditingSection({ ...editingSection, imagePosition: 'right' })}
-                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 relative group ${
-                          editingSection.imagePosition === 'right'
-                            ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
-                            : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-800">تصویر در راست | متن در چپ</span>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
-                            editingSection.imagePosition === 'right' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            تمرکز بر تصویر
-                          </span>
-                        </div>
-
-                        {/* Visual Mini Representation of Layout */}
-                        <div className="bg-slate-100/90 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                          {/* Right side in RTL: Image box */}
-                          <div className="w-16 h-12 rounded-lg bg-amber-100 border border-amber-300 flex flex-col items-center justify-center shrink-0 text-amber-700 shadow-xs">
-                            <ImageIcon className="w-4 h-4" />
-                            <span className="text-[8px] font-bold mt-0.5">تصویر</span>
                           </div>
-                          {/* Left side in RTL: Text lines */}
-                          <div className="flex-1 space-y-1.5 text-right">
-                            <div className="h-2 w-3/4 bg-blue-600/80 rounded-full" />
-                            <div className="h-1.5 w-full bg-slate-300 rounded-full" />
-                            <div className="h-1.5 w-5/6 bg-slate-300 rounded-full" />
+
+                          {/* Mini visual diagram */}
+                          <div className="bg-slate-100/90 p-2 rounded-xl border border-slate-200 flex items-center gap-2">
+                            <div className="flex-1 space-y-1 text-right">
+                              <div className="h-1.5 w-3/4 bg-blue-600/80 rounded-full" />
+                              <div className="h-1 w-full bg-slate-300 rounded-full" />
+                              <div className="h-1 w-5/6 bg-slate-300 rounded-full" />
+                            </div>
+                            <div className="w-12 h-9 rounded-lg bg-blue-100 border border-blue-300 flex flex-col items-center justify-center shrink-0 text-blue-600">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span className="text-[7px] font-bold">تصویر چپ</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] font-bold">
+                            {(editingSection.imagePosition || 'left') === 'left' ? (
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                                فعال
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 group-hover:text-slate-600">انتخاب</span>
+                            )}
                           </div>
                         </div>
 
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                          تصویر در سمت راست قرار گرفته و متن و جزئیات در سمت چپ چیده می‌شوند.
-                        </p>
+                        {/* Option 2: Image Right, Text Left */}
+                        <div
+                          onClick={() => setEditingSection({ ...editingSection, imagePosition: 'right' })}
+                          className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-2.5 relative group ${
+                            editingSection.imagePosition === 'right'
+                              ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
+                              : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800">تصویر در راست | متن در چپ</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                              editingSection.imagePosition === 'right' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              تمرکز بر تصویر
+                            </span>
+                          </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
-                          {editingSection.imagePosition === 'right' ? (
-                            <span className="flex items-center gap-1 text-blue-600">
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              انتخاب شده
+                          {/* Mini visual diagram */}
+                          <div className="bg-slate-100/90 p-2 rounded-xl border border-slate-200 flex items-center gap-2">
+                            <div className="w-12 h-9 rounded-lg bg-amber-100 border border-amber-300 flex flex-col items-center justify-center shrink-0 text-amber-700">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span className="text-[7px] font-bold">تصویر راست</span>
+                            </div>
+                            <div className="flex-1 space-y-1 text-right">
+                              <div className="h-1.5 w-3/4 bg-blue-600/80 rounded-full" />
+                              <div className="h-1 w-full bg-slate-300 rounded-full" />
+                              <div className="h-1 w-5/6 bg-slate-300 rounded-full" />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] font-bold">
+                            {editingSection.imagePosition === 'right' ? (
+                              <span className="flex items-center gap-1 text-amber-600">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                                فعال
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 group-hover:text-slate-600">انتخاب</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Option 3: Image Top, Text Bottom */}
+                        <div
+                          onClick={() => setEditingSection({ ...editingSection, imagePosition: 'top' })}
+                          className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-2.5 relative group ${
+                            editingSection.imagePosition === 'top'
+                              ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
+                              : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800">تصویر در بالا | متن در پایین</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                              editingSection.imagePosition === 'top' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              چیدمان پشته‌ای
                             </span>
-                          ) : (
-                            <span className="text-slate-400 group-hover:text-slate-600">
-                              کلیک برای انتخاب
-                            </span>
-                          )}
+                          </div>
+
+                          {/* Mini visual diagram */}
+                          <div className="bg-slate-100/90 p-2 rounded-xl border border-slate-200 flex flex-col gap-1.5">
+                            <div className="w-full h-6 rounded bg-indigo-100 border border-indigo-300 flex items-center justify-center text-indigo-700">
+                              <ImageIcon className="w-3 h-3 ml-1" />
+                              <span className="text-[7px] font-bold">تصویر عریض بالا</span>
+                            </div>
+                            <div className="space-y-1 text-right">
+                              <div className="h-1 w-2/3 bg-blue-600/80 rounded-full" />
+                              <div className="h-1 w-full bg-slate-300 rounded-full" />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] font-bold">
+                            {editingSection.imagePosition === 'top' ? (
+                              <span className="flex items-center gap-1 text-indigo-600">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                                فعال
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 group-hover:text-slate-600">انتخاب</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Text Alignment Row */}
+                    {/* Section 2: Ratio & Vertical Alignment Settings (Only when not 'top') */}
+                    {editingSection.imagePosition !== 'top' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Content Ratio: Balanced / Text-heavy / Image-heavy */}
+                        <div className="bg-white/90 p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
+                          <label className="block text-xs font-bold text-slate-700">
+                            تقسیم و نسبت عرض ستون‌ها:
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {[
+                              { id: 'balanced', label: 'متعادل (۵۰/۵۰)', desc: 'تساوی متن و تصویر' },
+                              { id: 'text-heavy', label: 'متن‌محور (۶۰/۴۰)', desc: 'فضای بیشتر متن' },
+                              { id: 'image-heavy', label: 'تصویرمحور (۴۰/۶۰)', desc: 'تصویر بزرگتر' }
+                            ].map(ratio => {
+                              const isSelected = (editingSection.contentRatio || 'balanced') === ratio.id;
+                              return (
+                                <button
+                                  key={ratio.id}
+                                  type="button"
+                                  onClick={() => setEditingSection({ ...editingSection, contentRatio: ratio.id as any })}
+                                  className={`p-2 rounded-xl text-center transition-all cursor-pointer border ${
+                                    isSelected 
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}
+                                >
+                                  <div className="text-[11px] font-bold leading-snug">{ratio.label}</div>
+                                  <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    {ratio.desc}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Vertical Align: Center vs Start */}
+                        <div className="bg-white/90 p-3.5 rounded-2xl border border-slate-200/90 space-y-2">
+                          <label className="block text-xs font-bold text-slate-700">
+                            تراز عمودی محتوا و تصویر:
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { id: 'center', label: 'وسط‌چین عمودی', desc: 'متن و تصویر در مرکز ارتفاع' },
+                              { id: 'start', label: 'تراز از بالای کادر', desc: 'شروع از لبه بالایی' }
+                            ].map(vAlign => {
+                              const isSelected = (editingSection.verticalAlign || 'center') === vAlign.id;
+                              return (
+                                <button
+                                  key={vAlign.id}
+                                  type="button"
+                                  onClick={() => setEditingSection({ ...editingSection, verticalAlign: vAlign.id as any })}
+                                  className={`p-2 rounded-xl text-center transition-all cursor-pointer border ${
+                                    isSelected 
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}
+                                >
+                                  <div className="text-[11px] font-bold">{vAlign.label}</div>
+                                  <div className={`text-[9px] mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    {vAlign.desc}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Section 3: Text Alignment */}
                     <div className="bg-white/90 p-3.5 rounded-2xl border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Type className="w-4 h-4 text-slate-500" />
@@ -1194,61 +1344,94 @@ export default function PresentationManager() {
                       </div>
                     </div>
 
-                    {/* Live Mini Preview Bar */}
-                    <div className="bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between gap-4">
-                      <div className="text-[11px] text-slate-400 font-bold shrink-0">
-                        پیش‌نمایش زنده چیدمان:
+                    {/* Live Mini Dynamic Preview Bar */}
+                    <div className="bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold">
+                        <span>پیش‌نمایش زنده چیدمان انتخاب‌شده:</span>
+                        <span className="text-blue-400">
+                          {editingSection.imagePosition === 'right' ? 'تصویر در راست' : editingSection.imagePosition === 'top' ? 'تصویر در بالا' : 'تصویر در چپ'} | {editingSection.textAlignment === 'center' ? 'متن وسط‌چین' : editingSection.textAlignment === 'justify' ? 'متن هم‌تراز' : 'متن راست‌چین'}
+                        </span>
                       </div>
-                      <div className="flex-1 flex items-center justify-center">
-                        <div className={`w-full max-w-sm flex items-center gap-3 p-2 bg-slate-800/80 rounded-xl border border-slate-700 ${
-                          editingSection.imagePosition === 'right' ? 'flex-row' : 'flex-row'
-                        }`}>
-                          {editingSection.imagePosition === 'right' ? (
-                            <>
-                              {/* Right side: Image */}
-                              <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center">
-                                {editingSection.image ? (
-                                  <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
-                                ) : (
-                                  <ImageIcon className="w-4 h-4 text-slate-400" />
-                                )}
-                              </div>
-                              {/* Left side: Text */}
-                              <div className={`flex-1 min-w-0 ${
-                                editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
-                              }`}>
-                                <div className="text-[11px] font-bold truncate text-white">
-                                  {editingSection.title || 'عنوان اسلاید'}
+
+                      <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+                        {editingSection.imagePosition === 'top' ? (
+                          <div className="space-y-2.5">
+                            {/* Image on top */}
+                            <div className="w-full h-16 rounded-lg overflow-hidden bg-slate-700 border border-slate-600 flex items-center justify-center">
+                              {editingSection.image ? (
+                                <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex items-center gap-1 text-slate-400 text-xs">
+                                  <ImageIcon className="w-4 h-4" />
+                                  <span>تصویر شاخص در بالای متن</span>
                                 </div>
-                                <div className="text-[9px] text-slate-400 truncate">
-                                  {editingSection.subtitle || 'متن زیرعنوان'}
-                                </div>
+                              )}
+                            </div>
+                            {/* Text below */}
+                            <div className={`${
+                              editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
+                            }`}>
+                              <div className="text-xs font-bold text-white">
+                                {editingSection.title || 'عنوان اسلاید'}
                               </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* Right side: Text */}
-                              <div className={`flex-1 min-w-0 ${
-                                editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
-                              }`}>
-                                <div className="text-[11px] font-bold truncate text-white">
-                                  {editingSection.title || 'عنوان اسلاید'}
-                                </div>
-                                <div className="text-[9px] text-slate-400 truncate">
-                                  {editingSection.subtitle || 'متن زیرعنوان'}
-                                </div>
+                              <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                {editingSection.subtitle || 'متن زیرعنوان و توضیحات معرفی مرکز'}
                               </div>
-                              {/* Left side: Image */}
-                              <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center">
-                                {editingSection.image ? (
-                                  <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
-                                ) : (
-                                  <ImageIcon className="w-4 h-4 text-slate-400" />
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            {editingSection.imagePosition === 'right' ? (
+                              <>
+                                {/* Right side: Image */}
+                                <div className={`h-14 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center ${
+                                  editingSection.contentRatio === 'image-heavy' ? 'w-24' : editingSection.contentRatio === 'text-heavy' ? 'w-14' : 'w-18'
+                                }`}>
+                                  {editingSection.image ? (
+                                    <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <ImageIcon className="w-4 h-4 text-slate-400" />
+                                  )}
+                                </div>
+                                {/* Left side: Text */}
+                                <div className={`flex-1 min-w-0 ${
+                                  editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
+                                }`}>
+                                  <div className="text-xs font-bold truncate text-white">
+                                    {editingSection.title || 'عنوان اسلاید'}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                    {editingSection.subtitle || 'متن زیرعنوان اسلاید'}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                {/* Right side: Text */}
+                                <div className={`flex-1 min-w-0 ${
+                                  editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
+                                }`}>
+                                  <div className="text-xs font-bold truncate text-white">
+                                    {editingSection.title || 'عنوان اسلاید'}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                    {editingSection.subtitle || 'متن زیرعنوان اسلاید'}
+                                  </div>
+                                </div>
+                                {/* Left side: Image */}
+                                <div className={`h-14 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center ${
+                                  editingSection.contentRatio === 'image-heavy' ? 'w-24' : editingSection.contentRatio === 'text-heavy' ? 'w-14' : 'w-18'
+                                }`}>
+                                  {editingSection.image ? (
+                                    <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <ImageIcon className="w-4 h-4 text-slate-400" />
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

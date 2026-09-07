@@ -337,6 +337,10 @@ export async function initializeDatabase() {
       ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS animation_easing VARCHAR(50) DEFAULT 'easeOut';
       ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'light';
       ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS is_visible BOOLEAN DEFAULT TRUE;
+      ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS image_position VARCHAR(50) DEFAULT 'left';
+      ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS text_alignment VARCHAR(50) DEFAULT 'right';
+      ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS content_ratio VARCHAR(50) DEFAULT 'balanced';
+      ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS vertical_align VARCHAR(50) DEFAULT 'center';
       ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE presentation_sections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
     `);
