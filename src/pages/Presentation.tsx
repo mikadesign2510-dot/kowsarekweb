@@ -333,6 +333,12 @@ const PresentationBlock: React.FC<{ section: PresentationSection, index: number,
   const animProps = getAnimationProps(section.animationStyle);
   const imageAnimProps = section.imageAnimationStyle ? getAnimationProps(section.imageAnimationStyle) : { initial: { opacity: 0, rotateY: index % 2 === 0 ? 30 : -30, x: index % 2 === 0 ? 100 : -100 }, animate: { opacity: 1, rotateY: 0, x: 0 } };
   const themeClasses = getThemeClasses(section.theme);
+  const isImageRight = section.imagePosition === 'right';
+  const textAlignClass = section.textAlignment === 'center' 
+    ? 'text-center' 
+    : section.textAlignment === 'justify' 
+    ? 'text-justify' 
+    : 'text-right';
 
   return (
     <section className={`relative w-full h-full flex items-center justify-center overflow-hidden ${themeClasses} px-6 sm:px-12 lg:px-16`}>
@@ -352,7 +358,7 @@ const PresentationBlock: React.FC<{ section: PresentationSection, index: number,
       )}
 
       <div className="max-w-6xl w-full mx-auto relative z-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-        {/* Right Column in RTL: Text Details (Balanced 6 cols) */}
+        {/* Text Details Column (Balanced 6 cols) */}
         <motion.div 
           {...animProps}
           transition={{ 
@@ -360,12 +366,14 @@ const PresentationBlock: React.FC<{ section: PresentationSection, index: number,
             ease: section.animationEasing || "easeOut", 
             delay: 0.3 
           }}
-          className="space-y-6 lg:col-span-6 text-right"
+          className={`space-y-6 lg:col-span-6 ${textAlignClass} ${
+            isImageRight ? 'order-2 lg:order-2' : 'order-1 lg:order-1'
+          }`}
         >
           {section.subtitle && (
             <span className={`inline-block px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold tracking-wider ${
               section.theme === 'light' ? 'bg-indigo-100 text-indigo-700' : 'bg-white/10 text-indigo-200'
-            }`}>
+            } ${section.textAlignment === 'center' ? 'mx-auto' : ''}`}>
               {section.subtitle}
             </span>
           )}
@@ -381,7 +389,7 @@ const PresentationBlock: React.FC<{ section: PresentationSection, index: number,
           </p>
         </motion.div>
 
-        {/* Left Column in RTL: 3D Visual Frame Showcase (Balanced 6 cols) */}
+        {/* Visual Frame Showcase (Balanced 6 cols) */}
         {section.image && (
           <motion.div
             {...imageAnimProps}
@@ -390,7 +398,9 @@ const PresentationBlock: React.FC<{ section: PresentationSection, index: number,
               ease: section.animationEasing || "easeOut", 
               delay: 0.2 
             }}
-            className="perspective-1000 lg:col-span-6 w-full"
+            className={`perspective-1000 lg:col-span-6 w-full ${
+              isImageRight ? 'order-1 lg:order-1' : 'order-2 lg:order-2'
+            }`}
           >
             <RenderPresentationImageFrame section={section} index={index} />
           </motion.div>

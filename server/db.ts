@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
+import { localDb } from './localDb.js';
 
 dotenv.config();
 
@@ -12,7 +13,7 @@ const connectionString =
   process.env.DATABASE_URL ||
   'postgresql://neondb_owner:npg_ZQhKTfr2n5cq@ep-solitary-tree-ax2d4o3c.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
-export const pool = new Pool({
+const realPool = new Pool({
   connectionString,
   ssl: {
     rejectUnauthorized: false,
@@ -22,10 +23,93 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
+let isPostgresAvailable = false;
+let hasCheckedPostgres = false;
+
+function isQuotaOrConnectionError(err: any): boolean {
+  if (!err) return false;
+  const msg = String(err?.message || err);
+  return (
+    msg.includes('quota') ||
+    msg.includes('exceeded') ||
+    msg.includes('data transfer quota') ||
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('ETIMEDOUT') ||
+    msg.includes('ENOTFOUND') ||
+    msg.includes('Connection terminated')
+  );
+}
+
 // جلوگیری از کرش کردن سرور هنگام بسته شدن اتصالات معلق نئون
-pool.on('error', (err: Error) => {
+realPool.on('error', (err: Error) => {
   console.warn('⚠️ PostgreSQL Pool idle client notice (non-fatal, auto-reconnecting):', err.message);
+  if (isQuotaOrConnectionError(err)) {
+    isPostgresAvailable = false;
+  }
 });
+
+export const pool = {
+  async query(sql: any, params?: any[]) {
+    if (!isPostgresAvailable && hasCheckedPostgres) {
+      return localDb.query(sql, params);
+    }
+    try {
+      return await realPool.query(sql, params);
+    } catch (err: any) {
+      if (isQuotaOrConnectionError(err)) {
+        if (isPostgresAvailable || !hasCheckedPostgres) {
+          console.warn('⚠️ پایگاه‌داده ریموت با محدودیت سهمیه (Quota Exceeded) یا قطعی مواجه شد. سامانه به ذخیره‌ساز محلی پایدار سوئیچ کرد.');
+          isPostgresAvailable = false;
+          hasCheckedPostgres = true;
+        }
+        return localDb.query(sql, params);
+      }
+      throw err;
+    }
+  },
+
+  async connect() {
+    if (!isPostgresAvailable && hasCheckedPostgres) {
+      return {
+        query: (sql: string, params?: any[]) => localDb.query(sql, params),
+        release: () => {}
+      };
+    }
+    try {
+      const client = await realPool.connect();
+      const originalQuery = client.query.bind(client);
+      (client as any).query = async (sql: any, params?: any[]) => {
+        try {
+          return await originalQuery(sql, params);
+        } catch (err: any) {
+          if (isQuotaOrConnectionError(err)) {
+            console.warn('⚠️ تراکنش ریموت با محدودیت سهمیه مواجه شد، سوئیچ به موتور محلی.');
+            isPostgresAvailable = false;
+            return localDb.query(sql, params);
+          }
+          throw err;
+        }
+      };
+      return client;
+    } catch (err: any) {
+      if (isQuotaOrConnectionError(err)) {
+        isPostgresAvailable = false;
+        hasCheckedPostgres = true;
+        return {
+          query: (sql: string, params?: any[]) => localDb.query(sql, params),
+          release: () => {}
+        };
+      }
+      throw err;
+    }
+  },
+
+  on: realPool.on.bind(realPool),
+  end: realPool.end.bind(realPool),
+  totalCount: 0,
+  idleCount: 0,
+  waitingCount: 0
+};
 
 /**
  * ایجاد و آماده‌سازی خودکار جداول پایگاه داده در نئون (PostgreSQL)
@@ -33,8 +117,20 @@ pool.on('error', (err: Error) => {
 export async function initializeDatabase() {
   let client;
   try {
-    client = await pool.connect();
-    console.log('✅ با موفقیت به پایگاه داده PostgreSQL (Neon) متصل شد.');
+    try {
+      client = await realPool.connect();
+      await client.query('SELECT 1');
+      isPostgresAvailable = true;
+      hasCheckedPostgres = true;
+      console.log('✅ با موفقیت به پایگاه داده PostgreSQL متصل شد.');
+    } catch (connErr: any) {
+      hasCheckedPostgres = true;
+      isPostgresAvailable = false;
+      console.log('📦 پایگاه داده ریموت به دلیل سقف سهمیه انتقال داده (Quota Exceeded) یا عدم دسترسی، در دسترس نیست.');
+      console.log('💎 موتور پایدار محلی سرور (Local Persistent DB Engine) با موفقیت فعال شد. داده‌های شما روی دیسک سرور ذخیره و نگهداری می‌شوند.');
+      localDb.persist();
+      return;
+    }
 
     // ۱. جدول کاربران ادمین
     await client.query(`
@@ -625,10 +721,19 @@ export async function initializeDatabase() {
     // بازخوانی و همگام‌سازی فایل‌های سرور
     await restoreUploadedFilesFromDB();
     await seedExistingDiskFilesToDB();
-  } catch (error) {
-    console.error('❌ خطا در اتصال یا آماده‌سازی پایگاه داده:', error);
+  } catch (error: any) {
+    if (isQuotaOrConnectionError(error)) {
+      hasCheckedPostgres = true;
+      isPostgresAvailable = false;
+      console.log('📦 محدودیت سهمیه دیتابیس در حین مقداردهی اولیه، انتقال خودکار به موتور محلی سرور.');
+      localDb.persist();
+    } else {
+      console.error('❌ خطا در اتصال یا آماده‌سازی پایگاه داده:', error);
+    }
   } finally {
-    if (client) client.release();
+    if (client) {
+      try { client.release(); } catch {}
+    }
   }
 }
 

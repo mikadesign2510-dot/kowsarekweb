@@ -178,9 +178,19 @@ export default function PresentationSection() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center"
             >
               {/* Text & Details Column - Balanced 6 Cols */}
-              <div className="lg:col-span-6 space-y-5 text-right">
+              <div className={`lg:col-span-6 space-y-5 ${
+                currentSection.textAlignment === 'center' 
+                  ? 'text-center' 
+                  : currentSection.textAlignment === 'justify' 
+                  ? 'text-justify' 
+                  : 'text-right'
+              } ${
+                currentSection.imagePosition === 'right' ? 'order-2 lg:order-2' : 'order-1 lg:order-1'
+              }`}>
                 {currentSection.subtitle && (
-                  <div className="inline-block bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs">
+                  <div className={`inline-block bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs ${
+                    currentSection.textAlignment === 'center' ? 'mx-auto' : ''
+                  }`}>
                     {currentSection.subtitle}
                   </div>
                 )}
@@ -194,14 +204,23 @@ export default function PresentationSection() {
                 </p>
 
                 {/* Badges / Highlights */}
-                <div className="pt-1 flex flex-wrap gap-2.5">
+                <div className={`pt-1 flex flex-wrap gap-2.5 ${
+                  currentSection.textAlignment === 'center' ? 'justify-center' : ''
+                }`}>
                   <span className="bg-slate-800/90 border border-slate-700/80 text-blue-300 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 shadow-xs">
                     <Layers className="w-4 h-4 text-blue-400" />
                     بخش {currentIndex + 1} از {sections.length} معرفی مرکز
                   </span>
+                  {currentSection.imagePosition === 'right' && (
+                    <span className="bg-blue-950/80 border border-blue-500/30 text-blue-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
+                      <span>چیدمان: تصویر در راست</span>
+                    </span>
+                  )}
                 </div>
 
-                <div className="pt-2 flex items-center gap-4">
+                <div className={`pt-2 flex items-center gap-4 ${
+                  currentSection.textAlignment === 'center' ? 'justify-center' : ''
+                }`}>
                   <Link
                     to="/presentation"
                     className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-4 py-2 rounded-xl border border-blue-500/30"
@@ -214,7 +233,9 @@ export default function PresentationSection() {
               </div>
 
               {/* Visual Image Showcase - Balanced 6 Cols */}
-              <div className="lg:col-span-6">
+              <div className={`lg:col-span-6 ${
+                currentSection.imagePosition === 'right' ? 'order-1 lg:order-1' : 'order-2 lg:order-2'
+              }`}>
                 <div className="relative group rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border-2 border-slate-700/80 shadow-2xl shadow-black/60 aspect-[16/10] ring-1 ring-white/10">
                   {currentSection.image ? (
                     <img

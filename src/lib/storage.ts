@@ -1219,6 +1219,8 @@ export interface PresentationSection {
   content: string;
   image?: string;
   icon?: string;
+  imagePosition?: 'left' | 'right'; // 'left': تصویر در سمت چپ | 'right': تصویر در سمت راست
+  textAlignment?: 'right' | 'center' | 'justify'; // جهت تراز متن
   animationStyle: 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'zoom' | 'flip-3d' | 'rotate-3d';
   imageAnimationStyle?: 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'zoom' | 'flip-3d' | 'rotate-3d';
   frameStyle?: PresentationFrameStyle;
@@ -1241,6 +1243,8 @@ export const defaultPresentationSections: PresentationSection[] = [
     title: 'مرکز آموزش علمی کاربردی کوثر کاکی',
     subtitle: 'پیشرو در آموزش مهارت‌محور و کارآفرینی',
     content: 'محیطی پویا و نوین برای ارتقای دانش و مهارت‌های کاربردی، تربیت نیروهای متخصص و کارآفرین برای ورود مقتدرانه به بازار کار کشور.',
+    imagePosition: 'left',
+    textAlignment: 'right',
     animationStyle: 'zoom',
     imageAnimationStyle: 'rotate-3d',
     frameStyle: 'floating-isometric',
@@ -1259,6 +1263,8 @@ export const defaultPresentationSections: PresentationSection[] = [
     title: 'ارتباط مستقیم با صنعت و بازار کار',
     subtitle: 'ورود مطمئن به بازار کار',
     content: 'برنامه‌های درسی همگام با نیازهای بازار کار، کارگاه‌ها و آزمایشگاه‌های مجهز و اساتید مجرب و کارآفرین.',
+    imagePosition: 'right',
+    textAlignment: 'right',
     animationStyle: 'slide-right',
     imageAnimationStyle: 'flip-3d',
     frameStyle: 'golden-gallery',

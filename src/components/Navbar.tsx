@@ -1,28 +1,21 @@
-import { Menu, X, Library, ShieldCheck } from 'lucide-react';
+import { Menu, X, Library } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { storage } from '../lib/storage';
-import { getAdminSession, ADMIN_AUTH_CHANGED_EVENT } from '../lib/adminSession';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState(storage.getSettings());
-  const [adminUser, setAdminUser] = useState(() => getAdminSession());
   const location = useLocation();
 
   useEffect(() => {
     const handleSettingsUpdate = () => {
       setSettings(storage.getSettings());
     };
-    const handleAdminAuthUpdate = () => {
-      setAdminUser(getAdminSession());
-    };
     window.addEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
-    window.addEventListener(ADMIN_AUTH_CHANGED_EVENT, handleAdminAuthUpdate);
     return () => {
       window.removeEventListener('kowsar_site_settings_changed', handleSettingsUpdate);
-      window.removeEventListener(ADMIN_AUTH_CHANGED_EVENT, handleAdminAuthUpdate);
     };
   }, []);
 
@@ -113,18 +106,6 @@ export default function Navbar() {
             </div>
             
             <div className="flex items-center gap-3 mr-2 border-r border-slate-200 pr-5 xl:pr-6">
-              {adminUser && (
-                <Link
-                  to="/admin"
-                  className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 hover:from-blue-800 hover:to-indigo-900 text-white font-bold px-3.5 py-2.5 rounded-xl shadow-sm hover:shadow transition-all transform hover:-translate-y-0.5 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2 border border-blue-400/30"
-                  title="ورود مستقیم به پنل مدیریت بدون نیاز به رمز مجدد"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-300 shrink-0" />
-                  <span>پنل مدیریت</span>
-                  <span className="hidden xl:inline text-[11px] text-blue-100 font-normal">({adminUser.name})</span>
-                </Link>
-              )}
-
               {settings.headerButtons?.map(btn => {
                 const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');
                 const className = btn.style === 'primary'
@@ -208,21 +189,6 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              {adminUser && (
-                <div className="pt-2 pb-1 border-t border-slate-100 px-1">
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center justify-between w-full bg-blue-50/90 hover:bg-blue-100 text-blue-900 font-bold px-4 py-3 rounded-xl border border-blue-200 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span className="text-sm">ورود به پنل مدیریت</span>
-                    </div>
-                    <span className="text-xs text-blue-700 font-medium">({adminUser.name})</span>
-                  </Link>
-                </div>
-              )}
               <div className="pt-2 mt-1 border-t border-slate-100 px-1 space-y-2">
                 {settings.headerButtons?.map(btn => {
                   const isExternal = btn.href.startsWith('http://') || btn.href.startsWith('https://') || btn.href.startsWith('//');

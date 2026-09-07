@@ -5,7 +5,7 @@ import { requireAuth } from '../middlewares/auth.js';
 const router = Router();
 
 // دریافت تنظیمات سایت
-router.get('/', async (req: Request, res: Response) => {
+router.get(['/', '/site'], async (req: Request, res: Response) => {
   try {
     const result = await pool.query('SELECT settings FROM site_settings WHERE id = 1');
     if (result.rows.length === 0) {
@@ -19,7 +19,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // ذخیره تنظیمات سایت (نیازمند لاگین)
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post(['/', '/site'], requireAuth, async (req: Request, res: Response) => {
   try {
     const settings = req.body;
     await pool.query(

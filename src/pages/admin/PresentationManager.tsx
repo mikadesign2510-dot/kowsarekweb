@@ -5,7 +5,8 @@ import {
   Image as ImageIcon, Sparkles, AlertCircle, ArrowUp, ArrowDown,
   Upload, UploadCloud, Crop, RefreshCw, Maximize2, Check,
   Camera, Sliders, ExternalLink, HelpCircle, Layers, Award,
-  ShieldCheck, Bookmark, Compass, Box, Palette, Link2
+  ShieldCheck, Bookmark, Compass, Box, Palette, Link2,
+  ArrowLeftRight, AlignRight, AlignCenter, AlignJustify, Columns2
 } from 'lucide-react';
 import { 
   storage, 
@@ -213,6 +214,8 @@ export default function PresentationManager() {
       subtitle: '',
       content: '',
       image: '',
+      imagePosition: 'left',
+      textAlignment: 'right',
       animationStyle: 'fade',
       imageAnimationStyle: 'rotate-3d',
       frameStyle: 'floating-isometric',
@@ -233,6 +236,8 @@ export default function PresentationManager() {
   const handleEdit = (section: PresentationSection) => {
     setEditingSection({ 
       ...section,
+      imagePosition: section.imagePosition || 'left',
+      textAlignment: section.textAlignment || 'right',
       showOverlayText: section.showOverlayText !== false,
       overlaySubtitle: section.overlaySubtitle || '',
       overlayPosition: section.overlayPosition || 'top-right',
@@ -638,6 +643,14 @@ export default function PresentationManager() {
                     <Sparkles className="w-3 h-3" />
                     انیمیشن متن: {section.animationStyle}
                   </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                    section.imagePosition === 'right' 
+                      ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                      : 'bg-blue-50 text-blue-700 border-blue-100'
+                  }`}>
+                    <ArrowLeftRight className="w-3 h-3" />
+                    {section.imagePosition === 'right' ? 'تصویر: سمت راست | متن: چپ' : 'تصویر: سمت چپ | متن: راست'}
+                  </span>
                   {section.image && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100">
                       <Box className="w-3 h-3" />
@@ -1019,6 +1032,225 @@ export default function PresentationManager() {
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* DEDICATED LAYOUT & POSITIONING CUSTOMIZATION */}
+                  <div className="md:col-span-2 bg-gradient-to-br from-blue-50/60 via-slate-50 to-indigo-50/40 p-5 rounded-3xl border border-blue-200/80 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-blue-200/60 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+                          <ArrowLeftRight className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            محل قرارگیری تصویر و متن (شخصی‌سازی چیدمان اسلاید)
+                            <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                              قابلیت سفارشی
+                            </span>
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            مشخص کنید تصویر در سمت راست یا سمت چپ قرار گیرد و تراز متن را تعیین کنید
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layout Choices Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Option 1: Image Left, Text Right (Default RTL) */}
+                      <div
+                        onClick={() => setEditingSection({ ...editingSection, imagePosition: 'left' })}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 relative group ${
+                          (editingSection.imagePosition || 'left') === 'left'
+                            ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
+                            : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">تصویر در چپ | متن در راست</span>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
+                            (editingSection.imagePosition || 'left') === 'left' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            استاندارد فارسی
+                          </span>
+                        </div>
+
+                        {/* Visual Mini Representation of Layout */}
+                        <div className="bg-slate-100/90 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                          {/* Right side in RTL: Text lines */}
+                          <div className="flex-1 space-y-1.5 text-right">
+                            <div className="h-2 w-3/4 bg-blue-600/80 rounded-full" />
+                            <div className="h-1.5 w-full bg-slate-300 rounded-full" />
+                            <div className="h-1.5 w-5/6 bg-slate-300 rounded-full" />
+                          </div>
+                          {/* Left side in RTL: Image box */}
+                          <div className="w-16 h-12 rounded-lg bg-blue-100 border border-blue-300 flex flex-col items-center justify-center shrink-0 text-blue-600 shadow-xs">
+                            <ImageIcon className="w-4 h-4" />
+                            <span className="text-[8px] font-bold mt-0.5">تصویر</span>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          متن در سمت راست شروع می‌شود و تصویر در سمت چپ قرار می‌گیرد (چیدمان طبیعی RTL).
+                        </p>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
+                          {(editingSection.imagePosition || 'left') === 'left' ? (
+                            <span className="flex items-center gap-1 text-blue-600">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              انتخاب شده
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 group-hover:text-slate-600">
+                              کلیک برای انتخاب
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Option 2: Image Right, Text Left */}
+                      <div
+                        onClick={() => setEditingSection({ ...editingSection, imagePosition: 'right' })}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 relative group ${
+                          editingSection.imagePosition === 'right'
+                            ? 'border-blue-600 bg-white shadow-md ring-2 ring-blue-200'
+                            : 'border-slate-200 bg-white/80 hover:bg-white hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">تصویر در راست | متن در چپ</span>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
+                            editingSection.imagePosition === 'right' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            تمرکز بر تصویر
+                          </span>
+                        </div>
+
+                        {/* Visual Mini Representation of Layout */}
+                        <div className="bg-slate-100/90 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                          {/* Right side in RTL: Image box */}
+                          <div className="w-16 h-12 rounded-lg bg-amber-100 border border-amber-300 flex flex-col items-center justify-center shrink-0 text-amber-700 shadow-xs">
+                            <ImageIcon className="w-4 h-4" />
+                            <span className="text-[8px] font-bold mt-0.5">تصویر</span>
+                          </div>
+                          {/* Left side in RTL: Text lines */}
+                          <div className="flex-1 space-y-1.5 text-right">
+                            <div className="h-2 w-3/4 bg-blue-600/80 rounded-full" />
+                            <div className="h-1.5 w-full bg-slate-300 rounded-full" />
+                            <div className="h-1.5 w-5/6 bg-slate-300 rounded-full" />
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          تصویر در سمت راست قرار گرفته و متن و جزئیات در سمت چپ چیده می‌شوند.
+                        </p>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
+                          {editingSection.imagePosition === 'right' ? (
+                            <span className="flex items-center gap-1 text-blue-600">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              انتخاب شده
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 group-hover:text-slate-600">
+                              کلیک برای انتخاب
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Text Alignment Row */}
+                    <div className="bg-white/90 p-3.5 rounded-2xl border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Type className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs font-bold text-slate-700">جهت تراز متن توضیحات:</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {[
+                          { id: 'right', label: 'راست‌چین', icon: AlignRight },
+                          { id: 'center', label: 'وسط‌چین', icon: AlignCenter },
+                          { id: 'justify', label: 'هم‌تراز (Justify)', icon: AlignJustify }
+                        ].map(align => {
+                          const isSelected = (editingSection.textAlignment || 'right') === align.id;
+                          const IconComponent = align.icon;
+                          return (
+                            <button
+                              key={align.id}
+                              type="button"
+                              onClick={() => setEditingSection({ ...editingSection, textAlignment: align.id as any })}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-blue-600 text-white shadow-xs' 
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              <IconComponent className="w-3.5 h-3.5" />
+                              <span>{align.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Live Mini Preview Bar */}
+                    <div className="bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between gap-4">
+                      <div className="text-[11px] text-slate-400 font-bold shrink-0">
+                        پیش‌نمایش زنده چیدمان:
+                      </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className={`w-full max-w-sm flex items-center gap-3 p-2 bg-slate-800/80 rounded-xl border border-slate-700 ${
+                          editingSection.imagePosition === 'right' ? 'flex-row' : 'flex-row'
+                        }`}>
+                          {editingSection.imagePosition === 'right' ? (
+                            <>
+                              {/* Right side: Image */}
+                              <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center">
+                                {editingSection.image ? (
+                                  <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                                )}
+                              </div>
+                              {/* Left side: Text */}
+                              <div className={`flex-1 min-w-0 ${
+                                editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
+                              }`}>
+                                <div className="text-[11px] font-bold truncate text-white">
+                                  {editingSection.title || 'عنوان اسلاید'}
+                                </div>
+                                <div className="text-[9px] text-slate-400 truncate">
+                                  {editingSection.subtitle || 'متن زیرعنوان'}
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Right side: Text */}
+                              <div className={`flex-1 min-w-0 ${
+                                editingSection.textAlignment === 'center' ? 'text-center' : 'text-right'
+                              }`}>
+                                <div className="text-[11px] font-bold truncate text-white">
+                                  {editingSection.title || 'عنوان اسلاید'}
+                                </div>
+                                <div className="text-[9px] text-slate-400 truncate">
+                                  {editingSection.subtitle || 'متن زیرعنوان'}
+                                </div>
+                              </div>
+                              {/* Left side: Image */}
+                              <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-700 border border-slate-600 flex items-center justify-center">
+                                {editingSection.image ? (
+                                  <img src={editingSection.image} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* DEDICATED FRAME DESIGN - 3 SIMPLE STYLES */}
